@@ -16,6 +16,7 @@ export class LoginComponent {
   loginForm: FormGroup;
   isLoading = false;
   errorMessage = '';
+  logoPath = 'assets/images/logo.png';
 
   constructor(
     private fb: FormBuilder,

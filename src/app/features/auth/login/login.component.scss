@@ -2,23 +2,101 @@
   min-height: 100vh;
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
   padding: 20px;
+  font-family: 'El Messiri', sans-serif;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    left: -50px;
+    right: -50px;
+    bottom: -50px;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.05;
+    z-index: 0;
+  }
+  
+  .row {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+  }
 }
 
 .card {
   border: none;
   border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.login-card {
+  animation: fadeInUp 0.6s ease-out;
+  border-left: 5px solid #4CAF50;
+  transform: translateY(0);
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card-body {
-  padding: 2rem;
+  padding: 2.5rem;
 }
 
 .card-title {
-  color: #333;
-  font-weight: 600;
+  color: #2E7D32;
+  font-weight: 700;
   margin-bottom: 0.5rem;
+  font-family: 'El Messiri', sans-serif;
+  font-size: 1.8rem;
+}
+
+.logo-container {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.text-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+  
+  .logo-text-primary {
+    font-family: 'El Messiri', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #FF9800;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  
+  .logo-text-secondary {
+    font-family: 'El Messiri', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #2E7D32;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
 }
 
 .form-control {
@@ -26,30 +104,47 @@
   border: 1px solid #e1e5e9;
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
 }
 
 .form-control:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+  background-color: #fff;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #495057;
+  font-family: 'El Messiri', sans-serif;
+  margin-bottom: 0.5rem;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
   border: none;
   border-radius: 8px;
   padding: 0.75rem 1.5rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.3s ease;
+  font-family: 'El Messiri', sans-serif;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 0.95rem;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%);
 }
 
 .btn-primary:disabled {
   transform: none;
   opacity: 0.7;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
 }
 
 .alert-danger {
@@ -57,4 +152,15 @@
   border: none;
   background-color: #f8d7da;
   color: #721c24;
+  font-family: 'El Messiri', sans-serif;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.text-muted {
+  color: #6c757d;
+  font-family: 'El Messiri', sans-serif;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
 }
