@@ -1,0 +1,263 @@
+.donor-management-container {
+  padding: 0;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-radius: 0.5rem;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+// Donor List Styles
+.donor-list {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.donor-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f8f9fa;
+  }
+
+  &.active {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.donor-avatar {
+  .avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #e3f2fd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2196f3;
+    font-size: 1.2rem;
+  }
+}
+
+.donor-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  .donor-item:hover & {
+    opacity: 1;
+  }
+}
+
+// Welcome State
+.welcome-state {
+  text-align: center;
+  color: #6c757d;
+  
+  i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+  
+  h5 {
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    margin-bottom: 0;
+  }
+}
+
+
+
+// Upload Modal Styles
+.modal {
+  &.show {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+}
+
+.upload-area {
+  border: 2px dashed #dee2e6;
+  border-radius: 0.5rem;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: #28a745;
+    background-color: #f0fff4;
+  }
+  
+  &.dragover {
+    border-color: #28a745;
+    background-color: #e8f5e8;
+    transform: scale(1.02);
+  }
+  
+  i {
+    color: #6c757d;
+  }
+  
+  h5 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    color: #6c757d;
+    margin-bottom: 0;
+  }
+}
+
+.upload-placeholder {
+  padding: 3rem 2rem;
+  text-align: center;
+  position: relative;
+  
+  i {
+    color: #6c757d;
+  }
+  
+  h5 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  p {
+    color: #6c757d;
+    margin-bottom: 0;
+    font-size: 0.875rem;
+  }
+}
+
+.file-selected {
+  padding: 2rem;
+  text-align: center;
+  
+  .file-info {
+    i {
+      color: #28a745;
+    }
+    
+    h6 {
+      color: #495057;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    
+    p {
+      color: #6c757d;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-progress {
+  .progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+
+    .progress-bar {
+      background-color: #28a745;
+    }
+  }
+}
+
+.upload-instructions {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid #28a745;
+
+  h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+
+    i {
+      color: #28a745;
+    }
+  }
+
+  .instruction-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+      padding: 0.25rem 0;
+      color: #6c757d;
+      font-size: 0.875rem;
+
+      &:before {
+        content: "•";
+        color: #28a745;
+        font-weight: bold;
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+      }
+    }
+  }
+}
+
+
+
+// Responsive Design
+@media (max-width: 768px) {
+  .donor-management-container {
+    .row > .col-lg-4,
+    .row > .col-lg-8 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .donor-list {
+    max-height: 400px;
+  }
+
+  .donor-item {
+    padding: 0.75rem;
+  }
+
+  .donor-avatar {
+    .avatar-circle {
+      width: 40px;
+      height: 40px;
+      font-size: 1rem;
+    }
+  }
+
+  .upload-area {
+    padding: 2rem 1rem;
+  }
+}

@@ -1,0 +1,630 @@
+<div class="donor-management-container">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">
+          <i class="fas fa-users me-2"></i>
+          Donor Management
+        </h4>
+        <div class="btn-group">
+          <button 
+            class="btn btn-primary"
+            (click)="openForm()"
+            [disabled]="isLoading"
+          >
+            <i class="fas fa-plus me-2"></i>
+            Add New Donor
+          </button>
+          <button 
+            class="btn btn-success"
+            (click)="openUploadModal()"
+            [disabled]="isLoading"
+          >
+            <i class="fas fa-upload me-2"></i>
+            Upload Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Left Panel - Donor List -->
+    <div class="col-lg-4 col-md-5">
+      <div class="card h-100">
+        <div class="card-header">
+          <h6 class="card-title mb-3">
+            <i class="fas fa-list me-2"></i>
+            Donors List ({{ filteredDonors.length }})
+          </h6>
+          <!-- Search -->
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="fas fa-search"></i>
+            </span>
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="Search donors..."
+              [(ngModel)]="searchTerm"
+              (input)="filterDonors()"
+            >
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <!-- Loading State -->
+          <div *ngIf="isLoading" class="text-center p-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading donors...</p>
+          </div>
+
+          <!-- Donor List -->
+          <div *ngIf="!isLoading" class="donor-list">
+            <div 
+              *ngFor="let donor of filteredDonors; trackBy: trackByDonorId" 
+              class="donor-item"
+              [class.active]="selectedDonor?.id === donor.id"
+              (click)="selectDonor(donor)"
+            >
+              <div class="d-flex align-items-center">
+                <div class="donor-avatar me-3">
+                  <div class="avatar-circle">
+                    <i class="fas fa-user"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="donor-name fw-bold">{{ donor.name }}</div>
+                  <div class="donor-details text-muted small">
+                    <div>{{ donor.email }}</div>
+                    <div>{{ donor.city }}, {{ donor.country }}</div>
+                  </div>
+                </div>
+                <div class="donor-actions">
+                  <button 
+                    class="btn btn-sm btn-outline-info me-1" 
+                    (click)="openDonorDetailModal(donor); $event.stopPropagation()"
+                    title="View Details"
+                  >
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-outline-primary me-1" 
+                    (click)="editDonor(donor); $event.stopPropagation()"
+                    title="Edit Donor"
+                  >
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-outline-danger" 
+                    (click)="deleteDonor(donor.id!); $event.stopPropagation()"
+                    title="Delete Donor"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="filteredDonors.length === 0" class="text-center p-4">
+              <i class="fas fa-users fa-3x text-muted mb-3"></i>
+              <h6 class="text-muted">No donors found</h6>
+              <p class="text-muted small mb-0">
+                {{ searchTerm ? 'Try adjusting your search criteria' : 'Start by adding a new donor' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel - Donor Details/Form -->
+    <div class="col-lg-8 col-md-7">
+      <div class="card h-100" *ngIf="isFormVisible">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-user me-2"></i>
+              {{ isEditMode ? 'Edit Donor' : 'Add New Donor' }}
+            </h6>
+            <button type="button" class="btn-close" (click)="closeForm()"></button>
+          </div>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="donorForm" (ngSubmit)="onSubmit()">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Donor ID *</label>
+                <input type="text" class="form-control" formControlName="donorId" placeholder="Enter donor ID">
+                <div *ngIf="donorForm.get('donorId')?.invalid && donorForm.get('donorId')?.touched" class="text-danger small">
+                  Donor ID is required
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Full Name *</label>
+                <input type="text" class="form-control" formControlName="name" placeholder="Enter full name">
+                <div *ngIf="donorForm.get('name')?.invalid && donorForm.get('name')?.touched" class="text-danger small">
+                  Name is required
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Email *</label>
+                <input type="email" class="form-control" formControlName="email" placeholder="Enter email address">
+                <div *ngIf="donorForm.get('email')?.invalid && donorForm.get('email')?.touched" class="text-danger small">
+                  Valid email is required
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Phone *</label>
+                <input type="tel" class="form-control" formControlName="phone" placeholder="Enter phone number">
+                <div *ngIf="donorForm.get('phone')?.invalid && donorForm.get('phone')?.touched" class="text-danger small">
+                  Phone is required
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12 mb-3">
+                <label class="form-label">Address *</label>
+                <input type="text" class="form-control" formControlName="address" placeholder="Enter primary address">
+                <div *ngIf="donorForm.get('address')?.invalid && donorForm.get('address')?.touched" class="text-danger small">
+                  Address is required
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12 mb-3">
+                <label class="form-label">Address Line 2</label>
+                <input type="text" class="form-control" formControlName="addressTwo" placeholder="Enter secondary address (optional)">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">City *</label>
+                <input type="text" class="form-control" formControlName="city" placeholder="Enter city">
+                <div *ngIf="donorForm.get('city')?.invalid && donorForm.get('city')?.touched" class="text-danger small">
+                  City is required
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">State *</label>
+                <input type="text" class="form-control" formControlName="state" placeholder="Enter state">
+                <div *ngIf="donorForm.get('state')?.invalid && donorForm.get('state')?.touched" class="text-danger small">
+                  State is required
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">ZIP Code *</label>
+                <input type="text" class="form-control" formControlName="zip" placeholder="Enter ZIP code">
+                <div *ngIf="donorForm.get('zip')?.invalid && donorForm.get('zip')?.touched" class="text-danger small">
+                  ZIP code is required
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Country *</label>
+                <input type="text" class="form-control" formControlName="country" placeholder="Enter country">
+                <div *ngIf="donorForm.get('country')?.invalid && donorForm.get('country')?.touched" class="text-danger small">
+                  Country is required
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Company</label>
+                <input type="text" class="form-control" formControlName="company" placeholder="Enter company name (optional)">
+              </div>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="button" class="btn btn-secondary me-2" (click)="closeForm()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="donorForm.invalid">
+                <i class="fas fa-save me-2"></i>
+                {{ isEditMode ? 'Update Donor' : 'Create Donor' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Donor Details View -->
+      <div class="card h-100" *ngIf="!isFormVisible && selectedDonor">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-user me-2"></i>
+              Donor Details
+            </h6>
+            <button class="btn btn-primary btn-sm" (click)="editDonor(selectedDonor)">
+              <i class="fas fa-edit me-2"></i>
+              Edit
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label text-muted">Donor ID</label>
+                <div class="fw-bold">{{ selectedDonor.donorId || 'N/A' }}</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-muted">Full Name</label>
+                <div class="fw-bold">{{ selectedDonor.name }}</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-muted">Email</label>
+                <div>{{ selectedDonor.email }}</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-muted">Phone</label>
+                <div>{{ selectedDonor.phone }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label text-muted">Address</label>
+                <div>{{ selectedDonor.address }}</div>
+                <div *ngIf="selectedDonor.addressTwo" class="text-muted">{{ selectedDonor.addressTwo }}</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-muted">Location</label>
+                <div>{{ selectedDonor.city }}, {{ selectedDonor.state }} {{ selectedDonor.zip }}</div>
+                <div class="text-muted">{{ selectedDonor.country }}</div>
+              </div>
+              <div class="mb-3" *ngIf="selectedDonor.company">
+                <label class="form-label text-muted">Company</label>
+                <div>{{ selectedDonor.company }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Welcome State -->
+      <div class="card h-100" *ngIf="!isFormVisible && !selectedDonor">
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <div class="welcome-state">
+            <i class="fas fa-users"></i>
+            <h5>Select a donor to view details</h5>
+            <p>Choose a donor from the list to see their information, or add a new donor.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Excel Upload Modal -->
+  <div class="modal fade" [class.show]="isUploadModalVisible" [style.display]="isUploadModalVisible ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-upload me-2"></i>
+            Upload Donor Excel File
+          </h5>
+          <button type="button" class="btn-close" (click)="closeUploadModal()"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8">
+              <!-- Upload Area -->
+              <div 
+                class="upload-area"
+                [class.dragover]="dragOver"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onDrop($event)"
+              >
+                <div *ngIf="!selectedFile" class="upload-placeholder">
+                  <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                  <h5>Drag and drop your Excel file here</h5>
+                  <p class="text-muted">or click to browse</p>
+                  <input 
+                    type="file" 
+                    class="file-input" 
+                    accept=".xlsx,.xls"
+                    (change)="onFileSelected($event)"
+                  >
+                </div>
+                
+                <div *ngIf="selectedFile" class="file-selected">
+                  <div class="file-info">
+                    <i class="fas fa-file-excel fa-2x text-success mb-2"></i>
+                    <h6>{{ selectedFile.name }}</h6>
+                    <p class="text-muted">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
+                    <button class="btn btn-sm btn-outline-danger" (click)="removeFile()">
+                      <i class="fas fa-times me-1"></i>
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload Progress -->
+              <div *ngIf="isUploading" class="upload-progress mt-3">
+                <div class="progress">
+                  <div 
+                    class="progress-bar progress-bar-striped progress-bar-animated" 
+                    [style.width.%]="uploadProgress"
+                  ></div>
+                </div>
+                <p class="text-center mt-2">Uploading... {{ uploadProgress }}%</p>
+              </div>
+
+              <!-- Upload Success -->
+              <div *ngIf="uploadSuccess" class="alert alert-success mt-3">
+                <i class="fas fa-check-circle me-2"></i>
+                Upload completed successfully! Donor data has been imported.
+              </div>
+
+              <!-- Upload Error -->
+              <div *ngIf="uploadError" class="alert alert-danger mt-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                {{ uploadError }}
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <!-- Upload Instructions -->
+              <div class="upload-instructions">
+                <h6><i class="fas fa-info-circle me-2"></i>Upload Instructions</h6>
+                <ul class="instruction-list">
+                  <li>File must be in Excel format (.xlsx or .xls)</li>
+                  <li>Maximum file size: 10MB</li>
+                  <li>First row should contain column headers</li>
+                  <li>Required columns: Donor ID, Name, Email, Phone, Address, City, State, ZIP, Country</li>
+                  <li>Optional columns: Address Two, Company</li>
+                </ul>
+                
+                <div class="mt-3">
+                  <h6><i class="fas fa-table me-2"></i>Column Order</h6>
+                  <small class="text-muted">
+                    A: Donor ID, B: Name, C: Address, D: Address Two, E: Phone, 
+                    F: Email, G: City, H: State, I: ZIP, J: Country, K: Company
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="closeUploadModal()"
+            [disabled]="isUploading"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-primary" 
+            (click)="uploadFile()"
+            [disabled]="!selectedFile || isUploading"
+          >
+            <i class="fas fa-upload me-2"></i>
+            Upload File
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Donor Detail Modal -->
+<div class="modal fade" [class.show]="isDonorDetailModalVisible" [style.display]="isDonorDetailModalVisible ? 'block' : 'none'" *ngIf="isDonorDetailModalVisible">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user me-2"></i>
+          Donor Details
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDonorDetailModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="isLoadingDonorDetail" class="text-center p-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2 text-muted">Loading donor details...</p>
+        </div>
+        
+        <div *ngIf="!isLoadingDonorDetail && selectedDonorDetail">
+          <!-- Donor Information -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Personal Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-sm-6 mb-2">
+                      <strong>Name:</strong> {{ selectedDonorDetail.name }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      <strong>Donor ID:</strong> {{ selectedDonorDetail.donorId }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      <strong>Email:</strong> {{ selectedDonorDetail.email }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      <strong>Phone:</strong> {{ selectedDonorDetail.phone }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      <strong>Company:</strong> {{ selectedDonorDetail.company || 'N/A' }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      <strong>Country:</strong> {{ selectedDonorDetail.country }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Donation Summary
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row text-center">
+                    <div class="col-4">
+                      <div class="stat-card">
+                        <div class="stat-value text-primary">{{ formatCurrency(selectedDonorDetail.totalDonations) }}</div>
+                        <div class="stat-label">Total Donations</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="stat-card">
+                        <div class="stat-value text-success">{{ selectedDonorDetail.numberOfGifts }}</div>
+                        <div class="stat-label">Total Gifts</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="stat-card">
+                        <div class="stat-value text-info">{{ selectedDonorDetail.sponsoredOrphans.length }}</div>
+                        <div class="stat-label">Sponsored Orphans</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Address Information -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    Address Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      <strong>Address:</strong> {{ selectedDonorDetail.address }}
+                    </div>
+                    <div class="col-md-6 mb-2" *ngIf="selectedDonorDetail.addressTwo">
+                      <strong>Address 2:</strong> {{ selectedDonorDetail.addressTwo }}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                      <strong>City:</strong> {{ selectedDonorDetail.city }}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                      <strong>State:</strong> {{ selectedDonorDetail.state }}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                      <strong>ZIP:</strong> {{ selectedDonorDetail.zip }}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                      <strong>Country:</strong> {{ selectedDonorDetail.country }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Sponsored Orphans -->
+          <div class="row mb-4" *ngIf="selectedDonorDetail.sponsoredOrphans.length > 0">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="fas fa-heart me-2"></i>
+                    Sponsored Orphans
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6" *ngFor="let orphanName of selectedDonorDetail.sponsoredOrphans">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-child me-2 text-success"></i>
+                        <span>{{ orphanName }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Recent Gifts -->
+          <div class="row">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="fas fa-gift me-2"></i>
+                    Recent Gifts (Last 5)
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div *ngIf="selectedDonorDetail.recentGifts.length === 0" class="text-center p-3">
+                    <i class="fas fa-gift fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No gifts found</p>
+                  </div>
+                  
+                  <div *ngIf="selectedDonorDetail.recentGifts.length > 0" class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Orphan</th>
+                          <th>Amount</th>
+                          <th>Type</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let gift of selectedDonorDetail.recentGifts">
+                          <td>{{ formatDate(gift.date) }}</td>
+                          <td>{{ gift.orphanName }}</td>
+                          <td>{{ formatCurrency(gift.amount) }}</td>
+                          <td>
+                            <span class="badge" [class]="{
+                              'bg-success': gift.giftType === 'KAFALA',
+                              'bg-primary': gift.giftType === 'DONATION',
+                              'bg-info': gift.giftType === 'SPONSORSHIP',
+                              'bg-warning': gift.giftType === 'EMERGENCY_AID'
+                            }">
+                              {{ gift.giftType }}
+                            </span>
+                          </td>
+                          <td>{{ gift.description || '-' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDonorDetailModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="isDonorDetailModalVisible"></div>

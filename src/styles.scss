@@ -1,0 +1,110 @@
+/* You can add global styles to this file, and also import other style files */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+@import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;500;600;700&display=swap');
+
+/* Global Styles */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8f9fa;
+}
+
+.btn {
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-radius: 0.5rem;
+}
+
+.form-control, .form-select {
+  border-radius: 0.375rem;
+  border: 1px solid #ced4da;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Default avatar placeholder */
+.default-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* El Messiri Font for Orphan Cards */
+.orphan-item {
+  .orphan-info {
+    font-family: 'El Messiri', cursive;
+    
+    h6 {
+      font-family: 'El Messiri', cursive;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #2c3e50;
+    }
+    
+    small {
+      font-family: 'El Messiri', cursive;
+      font-weight: 500;
+      font-size: 0.875rem;
+      
+      &.text-muted {
+        color: #6c757d !important;
+      }
+    }
+    
+    .badge {
+      font-family: 'El Messiri', cursive;
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+/* El Messiri for Orphan Detail Modal */
+.modal-title {
+  font-family: 'El Messiri', cursive;
+  font-weight: 600;
+}
+
+/* El Messiri for Gift Section */
+.section-content {
+  .card-header h6 {
+    font-family: 'El Messiri', cursive;
+    font-weight: 600;
+  }
+  
+  .card-body {
+    font-family: 'El Messiri', cursive;
+    font-weight: 400;
+  }
+  
+  .table {
+    font-family: 'El Messiri', cursive;
+    
+    th {
+      font-weight: 600;
+    }
+    
+    td {
+      font-weight: 400;
+    }
+  }
+}
+
+/* El Messiri for Buttons in Orphan Context */
+.orphan-management .btn {
+  font-family: 'El Messiri', cursive;
+  font-weight: 500;
+}

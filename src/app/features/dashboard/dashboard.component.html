@@ -1,0 +1,145 @@
+<!-- Top Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#">
+      <i class="fas fa-heart me-2"></i>
+      Charity Management System
+    </a>
+    
+    <div class="navbar-nav ms-auto">
+      <div class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="fas fa-user-circle me-2"></i>
+          {{ currentUser?.username }}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+          <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content Area -->
+<div class="container-fluid mt-4">
+  <!-- Tab Navigation -->
+  <div class="row">
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-tabs-custom mb-4">
+        <li class="nav-item">
+          <button 
+            class="nav-link" 
+            [class.active]="activeTab === 'orphans'"
+            (click)="setActiveTab('orphans')"
+          >
+            <i class="fas fa-child me-2"></i>
+            Orphan Management
+          </button>
+        </li>
+        <li class="nav-item">
+          <button 
+            class="nav-link" 
+            [class.active]="activeTab === 'donors'"
+            (click)="setActiveTab('donors')"
+          >
+            <i class="fas fa-hand-holding-heart me-2"></i>
+            Donor Management
+          </button>
+        </li>
+        <li class="nav-item">
+          <button 
+            class="nav-link" 
+            [class.active]="activeTab === 'donations'"
+            (click)="setActiveTab('donations')"
+          >
+            <i class="fas fa-donate me-2"></i>
+            Donation Management
+          </button>
+        </li>
+        <li class="nav-item">
+          <button 
+            class="nav-link" 
+            [class.active]="activeTab === 'projects'"
+            (click)="setActiveTab('projects')"
+          >
+            <i class="fas fa-project-diagram me-2"></i>
+            Charity Projects
+          </button>
+        </li>
+        <li class="nav-item">
+          <button 
+            class="nav-link" 
+            [class.active]="activeTab === 'reports'"
+            (click)="setActiveTab('reports')"
+          >
+            <i class="fas fa-chart-bar me-2"></i>
+            Reports
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="row">
+    <div class="col-12">
+      <!-- Orphan Management Tab -->
+      <div *ngIf="activeTab === 'orphans'" class="tab-content-panel">
+        <app-orphan-management></app-orphan-management>
+      </div>
+
+      <!-- Donor Management Tab -->
+      <div *ngIf="activeTab === 'donors'" class="tab-content-panel">
+        <app-donor-management></app-donor-management>
+      </div>
+
+      <!-- Donation Management Tab -->
+      <div *ngIf="activeTab === 'donations'" class="tab-content-panel">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-donate me-2"></i>
+              Donation Management
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Donation management functionality will be implemented here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charity Projects Tab -->
+      <div *ngIf="activeTab === 'projects'" class="tab-content-panel">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-project-diagram me-2"></i>
+              Charity Projects
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Charity projects functionality will be implemented here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Tab -->
+      <div *ngIf="activeTab === 'reports'" class="tab-content-panel">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-chart-bar me-2"></i>
+              Reports & Analytics
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Reports and analytics functionality will be implemented here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,380 @@
+.id-card-container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+}
+
+.action-buttons {
+  margin-bottom: 2rem;
+  text-align: center;
+  
+  .btn-group-top {
+    margin-bottom: 1rem;
+  }
+  
+  .btn-group-templates {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+    
+    h6 {
+      color: #495057;
+      font-weight: 600;
+    }
+    
+    .template-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+      
+      .btn {
+        min-width: 180px;
+        font-weight: 500;
+        
+        &.btn-primary {
+          background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+          border: none;
+          
+          &:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+          }
+        }
+        
+        &.btn-warning {
+          background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+          border: none;
+          color: #212529;
+          
+          &:hover {
+            background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+          }
+        }
+      }
+    }
+    
+    small {
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+  }
+}
+
+.id-card-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.id-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 2px solid #4CAF50;
+  position: relative;
+}
+
+/* Header */
+.card-header {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.header-logo .logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  background: white;
+  border-radius: 50%;
+  padding: 5px;
+}
+
+.header-title {
+  text-align: center;
+  flex: 1;
+}
+
+.header-title h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header-title .subtitle {
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0 0;
+  opacity: 0.9;
+}
+
+.header-qr .qr-code {
+  width: 60px;
+  height: 60px;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4CAF50;
+  font-size: 2rem;
+}
+
+/* Main Content */
+.card-content {
+  display: flex;
+  padding: 2rem;
+  gap: 2rem;
+}
+
+.photo-section {
+  flex: 0 0 200px;
+}
+
+.photo-frame {
+  width: 200px;
+  height: 250px;
+  border: 3px solid #4CAF50;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.orphan-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.details-section {
+  flex: 1;
+}
+
+.info-group {
+  margin-bottom: 1.5rem;
+}
+
+.group-title {
+  color: #4CAF50;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 0.3rem;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 0.6rem;
+  align-items: flex-start;
+}
+
+.info-row .label {
+  font-weight: 600;
+  color: #333;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.info-row .value {
+  color: #555;
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Health Status Colors */
+.health-good {
+  color: #28a745 !important;
+  font-weight: 600;
+}
+
+.health-fair {
+  color: #ffc107 !important;
+  font-weight: 600;
+}
+
+.health-poor {
+  color: #dc3545 !important;
+  font-weight: 600;
+}
+
+/* Footer */
+.card-footer {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-top: 2px solid #4CAF50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-info, .footer-signature, .footer-contact {
+  flex: 1;
+  min-width: 150px;
+}
+
+.footer-info p, .footer-contact p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.footer-signature {
+  text-align: center;
+}
+
+.signature-line .line {
+  width: 120px;
+  height: 1px;
+  background: #333;
+  margin: 0 auto 0.5rem;
+}
+
+.signature-line p {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0;
+}
+
+.footer-contact {
+  text-align: right;
+}
+
+.footer-contact i {
+  color: #4CAF50;
+  margin-right: 0.3rem;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .id-card-container {
+    padding: 0;
+    background: white;
+  }
+  
+  .id-card {
+    box-shadow: none;
+    border: 2px solid #000;
+    page-break-inside: avoid;
+  }
+  
+  .card-header {
+    background: #4CAF50 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .header-title h1 {
+    color: white !important;
+  }
+  
+  .group-title {
+    color: #000 !important;
+    border-bottom-color: #000 !important;
+  }
+  
+  .info-row .label {
+    color: #000 !important;
+  }
+  
+  .footer-contact i {
+    color: #000 !important;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .id-card-container {
+    padding: 1rem;
+  }
+  
+  .card-content {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .photo-section {
+    flex: none;
+    align-self: center;
+  }
+  
+  .photo-frame {
+    width: 150px;
+    height: 190px;
+  }
+  
+  .card-footer {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .footer-contact {
+    text-align: center;
+  }
+  
+  .header-title h1 {
+    font-size: 1.2rem;
+  }
+  
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  
+  .action-buttons .btn {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-logo, .header-qr {
+    display: none;
+  }
+  
+  .header-title {
+    text-align: center;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  
+  .info-row .label {
+    min-width: auto;
+    font-size: 0.9rem;
+  }
+  
+  .info-row .value {
+    font-size: 0.9rem;
+    padding-left: 1rem;
+  }
+}

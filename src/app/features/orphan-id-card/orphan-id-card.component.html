@@ -1,0 +1,211 @@
+<div class="id-card-container">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading orphan details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-container">
+    <div class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      {{ error }}
+    </div>
+    <button class="btn btn-primary" (click)="goBack()">
+      <i class="fas fa-arrow-left me-2"></i>
+      Go Back
+    </button>
+  </div>
+
+  <!-- ID Card -->
+  <div *ngIf="orphan && !isLoading && !error" class="id-card-wrapper">
+    <!-- Action Buttons -->
+    <div class="action-buttons no-print">
+      <div class="btn-group-top">
+        <button class="btn btn-secondary me-2" (click)="goBack()">
+          <i class="fas fa-arrow-left me-2"></i>
+          Back to List
+        </button>
+        <button class="btn btn-info me-2" (click)="printCard()">
+          <i class="fas fa-print me-2"></i>
+          Print Card
+        </button>
+        <button class="btn btn-success" (click)="downloadCard()">
+          <i class="fas fa-download me-2"></i>
+          Download PDF
+        </button>
+      </div>
+      
+      <!-- Template Generation Buttons -->
+      <div class="btn-group-templates mt-3">
+        <h6 class="mb-2 text-muted">Generate ID Card Templates:</h6>
+        <div class="template-buttons">
+          <button class="btn btn-primary me-2" (click)="generateCardTemplate1()">
+            <i class="fas fa-id-card me-2"></i>
+            Generate Template 1
+          </button>
+          <button class="btn btn-warning" (click)="generateCardTemplate2()">
+            <i class="fas fa-id-card me-2"></i>
+            Generate Template 2
+          </button>
+        </div>
+        <small class="text-muted mt-2 d-block">
+          <i class="fas fa-info-circle me-1"></i>
+          Templates will be downloaded as PNG images with the orphan's information overlaid.
+        </small>
+      </div>
+    </div>
+
+    <!-- ID Card Content -->
+    <div class="id-card" id="orphan-card">
+      <!-- Header -->
+      <div class="card-header">
+        <div class="header-logo">
+          <img src="/assets/images/charity-logo.svg" alt="Charity Logo" class="logo" 
+               onerror="this.style.display='none'">
+        </div>
+        <div class="header-title">
+          <h1>ORPHAN IDENTIFICATION CARD</h1>
+          <p class="subtitle">International Charity Organization</p>
+        </div>
+        <div class="header-qr">
+          <!-- QR Code placeholder -->
+          <div class="qr-code">
+            <i class="fas fa-qrcode"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="card-content">
+        <!-- Photo Section -->
+        <div class="photo-section">
+          <div class="photo-frame">
+            <img 
+              [src]="getOrphanPhotoUrl(orphan.photo)" 
+              [alt]="orphan.firstName + ' ' + orphan.lastName"
+              class="orphan-photo"
+              (error)="handleImageError($event)"
+            >
+          </div>
+        </div>
+
+        <!-- Details Section -->
+        <div class="details-section">
+          <!-- Basic Information -->
+          <div class="info-group">
+            <div class="info-row">
+              <span class="label">ID:</span>
+              <span class="value">{{ orphan.orphanId }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Full Name:</span>
+              <span class="value">{{ orphan.firstName }} {{ orphan.lastName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Date of Birth:</span>
+              <span class="value">{{ formatDate(orphan.dob) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Age:</span>
+              <span class="value">{{ calculateAge(orphan.dob) }} years</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Gender:</span>
+              <span class="value">{{ orphan.gender }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Place of Birth:</span>
+              <span class="value">{{ orphan.placeOfBirth }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Location:</span>
+              <span class="value">{{ orphan.location }}, {{ orphan.country }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Health Status:</span>
+              <span class="value" [class.health-good]="orphan.healthStatus === 'Good'" 
+                    [class.health-fair]="orphan.healthStatus === 'Fair'"
+                    [class.health-poor]="orphan.healthStatus === 'Poor'">
+                {{ orphan.healthStatus }}
+              </span>
+            </div>
+            <div class="info-row" *ngIf="orphan.specialNeeds">
+              <span class="label">Special Needs:</span>
+              <span class="value">{{ orphan.specialNeeds }}</span>
+            </div>
+          </div>
+
+          <!-- Family Information -->
+          <div class="info-group" *ngIf="orphan.familyInformation">
+            <h3 class="group-title">Family Information</h3>
+            <div class="info-row" *ngIf="orphan.familyInformation.ethnicGroup">
+              <span class="label">Ethnic Group:</span>
+              <span class="value">{{ orphan.familyInformation.ethnicGroup }}</span>
+            </div>
+            <div class="info-row" *ngIf="orphan.familyInformation.spokenLanguage">
+              <span class="label">Language:</span>
+              <span class="value">{{ orphan.familyInformation.spokenLanguage }}</span>
+            </div>
+            <div class="info-row" *ngIf="orphan.familyInformation.guardianName">
+              <span class="label">Guardian:</span>
+              <span class="value">{{ orphan.familyInformation.guardianName }}</span>
+            </div>
+            <div class="info-row" *ngIf="orphan.familyInformation.relationToOrphan">
+              <span class="label">Relation:</span>
+              <span class="value">{{ orphan.familyInformation.relationToOrphan }}</span>
+            </div>
+          </div>
+
+          <!-- Education Information -->
+          <div class="info-group" *ngIf="orphan.education">
+            <h3 class="group-title">Education</h3>
+            <div class="info-row" *ngIf="orphan.education.schoolName">
+              <span class="label">School:</span>
+              <span class="value">{{ orphan.education.schoolName }}</span>
+            </div>
+            <div class="info-row" *ngIf="orphan.education.gradeLevel">
+              <span class="label">Grade:</span>
+              <span class="value">{{ orphan.education.gradeLevel }}</span>
+            </div>
+            <div class="info-row" *ngIf="orphan.education.favoriteSubject">
+              <span class="label">Favorite Subject:</span>
+              <span class="value">{{ orphan.education.favoriteSubject }}</span>
+            </div>
+            <div class="info-row" *ngIf="orphan.education.orphanDream">
+              <span class="label">Dream:</span>
+              <span class="value">{{ orphan.education.orphanDream }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="card-footer">
+        <div class="footer-info">
+          <p class="issue-date">
+            <strong>Issue Date:</strong> {{ formatDate(issueDate) }}
+          </p>
+          <p class="validity">
+            <strong>Valid Until:</strong> {{ formatDate(validUntilDate) }}
+          </p>
+        </div>
+        <div class="footer-signature">
+          <div class="signature-line">
+            <div class="line"></div>
+            <p>Authorized Signature</p>
+          </div>
+        </div>
+        <div class="footer-contact">
+          <p class="contact-info">
+            <i class="fas fa-phone"></i> +1-800-CHARITY
+            <br>
+            <i class="fas fa-envelope"></i> info&#64;charity.org
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
