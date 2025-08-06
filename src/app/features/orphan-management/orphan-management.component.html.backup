@@ -355,19 +355,19 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Date of Birth *</label>
-                      <mat-form-field appearance="outline" class="w-100">
-                        <mat-label>Date of Birth</mat-label>
+                      <div class="input-group">
                         <input 
-                          matInput 
-                          [matDatepicker]="dobPicker" 
+                          type="text" 
+                          class="form-control"
                           formControlName="dob"
+                          [class.is-invalid]="orphanForm.get('dob')?.invalid && orphanForm.get('dob')?.touched"
                           placeholder="MM/dd/yyyy"
-                          readonly
+                          (blur)="formatDateInput('dob')"
                         >
-                        <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
-                        <mat-datepicker #dobPicker></mat-datepicker>
-                        <mat-error *ngIf="orphanForm.get('dob')?.hasError('required')">Date of birth is required</mat-error>
-                      </mat-form-field>
+                        <span class="input-group-text" style="cursor: pointer;" (click)="openDatePicker('dob')">
+                          <i class="fas fa-calendar"></i>
+                        </span>
+                      </div>
                       <div class="invalid-feedback">
                         Date of birth is required
                       </div>
@@ -456,18 +456,13 @@
                   <input type="text" class="form-control" formControlName="fatherName">
                 </div>
                 <div class="col-md-6 mb-3">
-                  <mat-form-field appearance="outline" class="w-100">
-                    <mat-label>Father's Date of Death</mat-label>
-                    <input 
-                      matInput 
-                      [matDatepicker]="fatherDeathPicker" 
-                      formControlName="fatherDateOfDeath"
-                      placeholder="MM/dd/yyyy"
-                      readonly
-                    >
-                    <mat-datepicker-toggle matIconSuffix [for]="fatherDeathPicker"></mat-datepicker-toggle>
-                    <mat-datepicker #fatherDeathPicker></mat-datepicker>
-                  </mat-form-field>
+                  <label class="form-label">Father's Date of Death</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control" formControlName="fatherDateOfDeath" placeholder="MM/dd/yyyy" (blur)="formatDateInput('fatherDateOfDeath')">
+                    <span class="input-group-text" style="cursor: pointer;" (click)="openDatePicker($event, 'dob')">
+                      <i class="fas fa-calendar"></i>
+                    </span>
+                  </div>
                 </div>
                 <div class="col-md-12 mb-3">
                   <label class="form-label">Father's Cause of Death</label>
@@ -487,18 +482,13 @@
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <mat-form-field appearance="outline" class="w-100">
-                    <mat-label>Mother's Date of Death</mat-label>
-                    <input 
-                      matInput 
-                      [matDatepicker]="motherDeathPicker" 
-                      formControlName="motherDateOfDeath"
-                      placeholder="MM/dd/yyyy"
-                      readonly
-                    >
-                    <mat-datepicker-toggle matIconSuffix [for]="motherDeathPicker"></mat-datepicker-toggle>
-                    <mat-datepicker #motherDeathPicker></mat-datepicker>
-                  </mat-form-field>
+                  <label class="form-label">Mother's Date of Death</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control" formControlName="motherDateOfDeath" placeholder="MM/dd/yyyy" (blur)="formatDateInput('motherDateOfDeath')">
+                    <span class="input-group-text" style="cursor: pointer;" (click)="openDatePicker($event, 'dob')">
+                      <i class="fas fa-calendar"></i>
+                    </span>
+                  </div>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Mother's Cause of Death</label>
@@ -782,25 +772,13 @@
           <div class="col-12">
             <!-- Upload Instructions -->
             <div class="alert alert-info mb-4">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h6><i class="fas fa-info-circle me-2"></i>Upload Instructions:</h6>
-                  <ul class="mb-0">
-                    <li>Upload an Excel file (.xlsx or .xls) containing orphan data</li>
-                    <li>The first row should contain column headers</li>
-                    <li>Required columns: Orphan ID, First Name, Last Name, Date of Birth</li>
-                    <li>Supports multiple date formats: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY</li>
-                    <li>Optional columns: Family Information and Education details</li>
-                  </ul>
-                </div>
-                <button 
-                  type="button" 
-                  class="btn btn-outline-primary btn-sm"
-                  (click)="downloadTemplate()"
-                  title="Download Excel template with examples">
-                  <i class="fas fa-download me-1"></i>Download Template
-                </button>
-              </div>
+              <h6><i class="fas fa-info-circle me-2"></i>Upload Instructions:</h6>
+              <ul class="mb-0">
+                <li>Upload an Excel file (.xlsx or .xls) containing orphan data</li>
+                <li>The first row should contain column headers</li>
+                <li>Required columns: Orphan ID, First Name, Last Name, Date of Birth, Gender, Location, Country, Health Status</li>
+                <li>Optional columns: Family Information and Education details</li>
+              </ul>
             </div>
 
             <!-- File Upload Area -->
@@ -958,20 +936,16 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Date *</mat-label>
-                  <input 
-                    matInput 
-                    [matDatepicker]="giftDatePicker" 
-                    formControlName="date"
-                    placeholder="MM/dd/yyyy"
-                    readonly
-                    required
-                  >
-                  <mat-datepicker-toggle matIconSuffix [for]="giftDatePicker"></mat-datepicker-toggle>
-                  <mat-datepicker #giftDatePicker></mat-datepicker>
-                  <mat-error *ngIf="giftForm.get('date')?.hasError('required')">Please select a date</mat-error>
-                </mat-form-field>
+                <label for="date" class="form-label">Date *</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="date" formControlName="date" required placeholder="MM/dd/yyyy" (blur)="formatDateInput('date', giftForm)">
+                  <span class="input-group-text">
+                    <i class="fas fa-calendar"></i>
+                  </span>
+                </div>
+                <div *ngIf="giftForm.get('date')?.invalid && giftForm.get('date')?.touched" class="text-danger small">
+                  Please select a date
+                </div>
               </div>
             </div>
           </div>

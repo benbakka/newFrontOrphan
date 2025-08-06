@@ -1,21 +1,38 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatNativeDateModule, MAT_DATE_LOCALE } from '@angular/material/core';
 import { Router } from '@angular/router';
-import { OrphanService } from '../../core/services/orphan.service';
 import { PdfService } from '../../core/services/pdf.service';
-import { GiftService } from '../../core/services/gift.service';
-import { DonorService } from '../../core/services/donor.service';
+import { OrphanService } from '../../core/services/orphan.service';
 import { OrphanListDTO } from '../../core/models/orphan-list.dto';
 import { OrphanDetailDTO } from '../../core/models/orphan-detail.dto';
 import { Gift, CreateGiftRequest, GiftType, KafalaFrequency } from '../../core/models/gift.model';
 import { Donor } from '../../core/models/donor.model';
+import { GiftService } from '../../core/services/gift.service';
+import { DonorService } from '../../core/services/donor.service';
+import { ExcelProcessorService } from '../../core/services/excel-processor.service';
+import { ExcelGeneratorService } from '../../core/services/excel-generator.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-orphan-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule, 
+    FormsModule,
+    MatDatepickerModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatNativeDateModule
+  ],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'en-US' }
+  ],
   templateUrl: './orphan-management.component.html',
   styleUrls: ['./orphan-management.component.scss']
 })
@@ -63,7 +80,9 @@ export class OrphanManagementComponent implements OnInit {
     private router: Router,
     private pdfService: PdfService,
     private giftService: GiftService,
-    private donorService: DonorService
+    private donorService: DonorService,
+    private excelProcessor: ExcelProcessorService,
+    private excelGenerator: ExcelGeneratorService
   ) {
     this.orphanForm = this.createOrphanForm();
     this.giftForm = this.createGiftForm();
@@ -71,6 +90,12 @@ export class OrphanManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadOrphansList();
+    this.setupDateFormatting();
+  }
+  
+  // Set up date formatting for US format (MM/dd/yyyy)
+  setupDateFormatting(): void {
+    // Angular Material date picker handles formatting automatically with en-US locale
   }
 
   // Data loading methods
@@ -131,10 +156,17 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   createGiftForm(): FormGroup {
+    // Format today's date as MM/dd/yyyy
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const year = today.getFullYear();
+    const formattedDate = `${year}-${month}-${day}`; // Still use ISO format for form value
+    
     return this.fb.group({
       donorId: ['', Validators.required],
       amount: ['', [Validators.required, Validators.min(0.01)]],
-      date: [new Date().toISOString().split('T')[0], Validators.required],
+      date: [formattedDate, Validators.required],
       description: [''],
       giftType: [GiftType.DONATION, Validators.required],
       kafalaFrequency: [''],
@@ -143,11 +175,22 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   populateForm(orphan: OrphanDetailDTO): void {
+    // Convert date strings to Date objects for Angular Material date picker
+    const parseDate = (dateStr: string | undefined): Date | null => {
+      if (!dateStr) return null;
+      try {
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+      } catch (e) {
+        return null;
+      }
+    };
+
     this.orphanForm.patchValue({
       orphanId: orphan.orphanId,
       firstName: orphan.firstName,
       lastName: orphan.lastName,
-      dob: orphan.dob,
+      dob: parseDate(orphan.dob),
       placeOfBirth: orphan.placeOfBirth,
       gender: orphan.gender,
       location: orphan.location,
@@ -159,11 +202,11 @@ export class OrphanManagementComponent implements OnInit {
       ethnicGroup: orphan.familyInformation?.ethnicGroup || '',
       spokenLanguage: orphan.familyInformation?.spokenLanguage || '',
       fatherName: orphan.familyInformation?.fatherName || '',
-      fatherDateOfDeath: orphan.familyInformation?.fatherDateOfDeath || '',
+      fatherDateOfDeath: parseDate(orphan.familyInformation?.fatherDateOfDeath),
       fatherCauseOfDeath: orphan.familyInformation?.fatherCauseOfDeath || '',
       motherName: orphan.familyInformation?.motherName || '',
       motherStatus: orphan.familyInformation?.motherStatus || '',
-      motherDateOfDeath: orphan.familyInformation?.motherDateOfDeath || '',
+      motherDateOfDeath: parseDate(orphan.familyInformation?.motherDateOfDeath),
       motherCauseOfDeath: orphan.familyInformation?.motherCauseOfDeath || '',
       numberOfSiblings: orphan.familyInformation?.numberOfSiblings || 0,
       guardianName: orphan.familyInformation?.guardianName || '',
@@ -243,12 +286,24 @@ export class OrphanManagementComponent implements OnInit {
       this.isLoading = true;
       const formValue = this.orphanForm.value;
       
+      // Convert Date objects to backend format (ISO)
+      const convertDateToBackendFormat = (dateValue: Date | string | null): string => {
+        if (!dateValue) return '';
+        try {
+          const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+          if (isNaN(date.getTime())) return '';
+          return date.toISOString();
+        } catch (e) {
+          return '';
+        }
+      };
+      
       const orphanData: OrphanDetailDTO = {
         id: this.selectedOrphan?.id,
         orphanId: formValue.orphanId,
         firstName: formValue.firstName,
         lastName: formValue.lastName,
-        dob: formValue.dob,
+        dob: convertDateToBackendFormat(formValue.dob),
         placeOfBirth: formValue.placeOfBirth,
         gender: formValue.gender,
         location: formValue.location,
@@ -260,11 +315,11 @@ export class OrphanManagementComponent implements OnInit {
           ethnicGroup: formValue.ethnicGroup,
           spokenLanguage: formValue.spokenLanguage,
           fatherName: formValue.fatherName,
-          fatherDateOfDeath: formValue.fatherDateOfDeath,
+          fatherDateOfDeath: convertDateToBackendFormat(formValue.fatherDateOfDeath),
           fatherCauseOfDeath: formValue.fatherCauseOfDeath,
           motherName: formValue.motherName,
           motherStatus: formValue.motherStatus,
-          motherDateOfDeath: formValue.motherDateOfDeath,
+          motherDateOfDeath: convertDateToBackendFormat(formValue.motherDateOfDeath),
           motherCauseOfDeath: formValue.motherCauseOfDeath,
           numberOfSiblings: formValue.numberOfSiblings,
           guardianName: formValue.guardianName,
@@ -301,10 +356,22 @@ export class OrphanManagementComponent implements OnInit {
           }
           this.isLoading = false;
           this.loadOrphansList();
-          // Don't cancel edit immediately, let user see the result
-          setTimeout(() => {
-            this.cancelEdit();
-          }, 1000);
+          
+          // Keep the form open and update the selected orphan with the saved data
+          if (!this.isCreating) {
+            this.selectedOrphan = savedOrphan;
+            // Refresh the form with the updated data
+            this.populateForm(savedOrphan);
+            // Show success message
+            alert('Orphan updated successfully!');
+          } else {
+            // For new orphans, show success and optionally keep form open
+            alert('Orphan created successfully!');
+            // Optionally close the form for new orphans
+            setTimeout(() => {
+              this.cancelEdit();
+            }, 1000);
+          }
         },
         error: (error) => {
           console.error('Error saving orphan:', error);
@@ -608,22 +675,12 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   private handleFileSelection(file: File): void {
-    // Validate file type
-    const allowedTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
-    if (!allowedTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+    // Use Excel processor validation
+    const validation = this.excelProcessor.validateExcelFile(file);
+    if (!validation.valid) {
       this.uploadResults = {
         success: false,
-        message: 'Please select a valid Excel file (.xlsx or .xls)'
-      };
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      this.uploadResults = {
-        success: false,
-        message: 'File size must be less than 10MB'
+        message: validation.error || 'Invalid file'
       };
       return;
     }
@@ -637,54 +694,140 @@ export class OrphanManagementComponent implements OnInit {
     this.uploadResults = null;
   }
 
-  uploadFile(): void {
+  async uploadFile(): Promise<void> {
     if (!this.selectedFile) return;
 
     this.isUploading = true;
     this.uploadProgress = 0;
     this.uploadResults = null;
 
-    // Simulate progress
+    // Simulate progress for UI feedback
     const progressInterval = setInterval(() => {
-      if (this.uploadProgress < 90) {
-        this.uploadProgress += 10;
+      if (this.uploadProgress < 30) {
+        this.uploadProgress += 5;
       }
-    }, 200);
+    }, 100);
 
-    this.orphanService.uploadExcelFile(this.selectedFile).subscribe({
-      next: (response) => {
+    try {
+      // First, process the Excel file locally with date parsing to validate and show detailed feedback
+      this.uploadProgress = 30;
+      const processingResult = await this.excelProcessor.processExcelFile(this.selectedFile);
+      
+      if (!processingResult.success) {
         clearInterval(progressInterval);
-        this.uploadProgress = 100;
+        this.uploadProgress = 0;
+        
+        let errorMessage = 'Failed to process Excel file.';
+        if (processingResult.errors && processingResult.errors.length > 0) {
+          errorMessage += '\n\nErrors:\n' + processingResult.errors.join('\n');
+        }
+        if (processingResult.warnings && processingResult.warnings.length > 0) {
+          errorMessage += '\n\nWarnings:\n' + processingResult.warnings.join('\n');
+        }
         
         this.uploadResults = {
-          success: true,
-          message: 'Excel file uploaded and processed successfully!',
-          count: response.length
+          success: false,
+          message: errorMessage
         };
         
-        // Refresh the orphan list
-        this.loadOrphansList();
-        
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          this.closeUploadModal();
-          this.resetUploadState();
-        }, 2000);
-        
         this.isUploading = false;
-      },
-      error: (error) => {
+        return;
+      }
+
+      // Update progress
+      this.uploadProgress = 60;
+      
+      // Generate a corrected Excel file with standardized dates and upload it
+      if (processingResult.data && processingResult.data.length > 0) {
+        try {
+          // Generate corrected Excel file with standardized date formats
+          const correctedFile = this.excelGenerator.generateCorrectedExcelFile(
+            processingResult.data, 
+            this.selectedFile.name
+          );
+          
+          // Upload the corrected file
+          this.orphanService.uploadExcelFile(correctedFile).subscribe({
+            next: (response) => {
+              clearInterval(progressInterval);
+              this.uploadProgress = 100;
+              
+              let message = `Successfully processed ${response.length} orphan(s) with corrected date formats.`;
+              if (processingResult.warnings && processingResult.warnings.length > 0) {
+                message += '\n\nDate processing notes:\n' + processingResult.warnings.join('\n');
+              }
+              
+              this.uploadResults = {
+                success: true,
+                message: message,
+                count: response.length
+              };
+              
+              // Refresh the orphan list
+              this.loadOrphansList();
+              
+              // Close modal after 3 seconds
+              setTimeout(() => {
+                this.closeUploadModal();
+                this.resetUploadState();
+              }, 3000);
+              
+              this.isUploading = false;
+            },
+            error: (error) => {
+              clearInterval(progressInterval);
+              this.uploadProgress = 0;
+              
+              let errorMessage = 'Failed to upload corrected Excel file to server.';
+              if (error.error?.message) {
+                errorMessage += `\n\nServer error: ${error.error.message}`;
+              }
+              if (processingResult.warnings && processingResult.warnings.length > 0) {
+                errorMessage += '\n\nDate processing notes:\n' + processingResult.warnings.join('\n');
+              }
+              
+              this.uploadResults = {
+                success: false,
+                message: errorMessage
+              };
+              
+              this.isUploading = false;
+            }
+          });
+        } catch (fileGenerationError: any) {
+          clearInterval(progressInterval);
+          this.uploadProgress = 0;
+          
+          this.uploadResults = {
+            success: false,
+            message: `Failed to generate corrected Excel file: ${fileGenerationError.message || 'Unknown error'}`
+          };
+          
+          this.isUploading = false;
+        }
+      } else {
         clearInterval(progressInterval);
         this.uploadProgress = 0;
         
         this.uploadResults = {
           success: false,
-          message: error.error?.message || 'Failed to upload and process Excel file. Please check the file format and try again.'
+          message: 'No valid orphan data found in the Excel file.'
         };
         
         this.isUploading = false;
       }
-    });
+      
+    } catch (error: any) {
+      clearInterval(progressInterval);
+      this.uploadProgress = 0;
+      
+      this.uploadResults = {
+        success: false,
+        message: `Failed to process Excel file: ${error.message || 'Unknown error'}`
+      };
+      
+      this.isUploading = false;
+    }
   }
 
   formatFileSize(bytes: number): string {
@@ -693,6 +836,17 @@ export class OrphanManagementComponent implements OnInit {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // Download Excel template
+  downloadTemplate(): void {
+    try {
+      const templateFile = this.excelGenerator.generateTemplateFile();
+      this.excelGenerator.downloadFile(templateFile);
+    } catch (error) {
+      console.error('Error generating template:', error);
+      // You could show a toast notification here
+    }
   }
 
   // Gift Management Methods
@@ -774,17 +928,30 @@ export class OrphanManagementComponent implements OnInit {
   submitGift(): void {
     if (this.giftForm.valid && this.selectedOrphanForGift) {
       this.isAddingGift = true;
-      
       const formValue = this.giftForm.value;
+      
+      // Convert Date object to ISO format for backend
+      let dateValue = '';
+      if (formValue.date) {
+        try {
+          const date = formValue.date instanceof Date ? formValue.date : new Date(formValue.date);
+          if (!isNaN(date.getTime())) {
+            dateValue = date.toISOString();
+          }
+        } catch (e) {
+          console.error('Error converting date:', e);
+        }
+      }
+      
       const giftRequest: CreateGiftRequest = {
+        orphanId: this.selectedOrphanForGift.id,
         donorId: formValue.donorId,
-        orphanId: this.selectedOrphanForGift.id!,
         amount: formValue.amount,
-        date: this.formatDateForBackend(formValue.date),
-        description: formValue.description,
+        date: dateValue,
+        description: formValue.description || '',
         giftType: formValue.giftType,
-        kafalaFrequency: formValue.kafalaFrequency || undefined,
-        isKafala: formValue.isKafala
+        isKafala: formValue.isKafala,
+        kafalaFrequency: formValue.isKafala ? formValue.kafalaFrequency : null
       };
 
       this.giftService.createGift(giftRequest).subscribe({
@@ -843,25 +1010,94 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    } catch (e) {
+      return '';
+    }
+  }
+  
+  // Format date input to MM/dd/yyyy when user leaves the field
+  formatDateInput(controlName: string, form: FormGroup = this.orphanForm): void {
+    const control = form.get(controlName);
+    if (!control || !control.value) return;
+    
+    let dateValue = control.value;
+    
+    // If it's already in MM/dd/yyyy format
+    const mmddyyyyRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+    if (mmddyyyyRegex.test(dateValue)) {
+      // Already in correct format, just validate it's a real date
+      const [month, day, year] = dateValue.split('/');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        // Valid date, keep as is
+        return;
+      }
+    }
+    
+    try {
+      // Try to parse the input as a date
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        // Valid date, format it as MM/dd/yyyy
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const year = date.getFullYear();
+        control.setValue(`${month}/${day}/${year}`);
+      }
+    } catch (e) {
+      // If parsing fails, leave as is
+      console.error('Error formatting date:', e);
+    }
   }
 
   // Format date for backend LocalDateTime compatibility
   formatDateForBackend(dateString: string): string {
+    if (!dateString) return '';
+    
     // If the date already includes time, return as is
     if (dateString.includes('T')) {
       return dateString;
     }
     
-    // If it's just a date (YYYY-MM-DD), add current time
-    const date = new Date(dateString);
-    const now = new Date();
-    
-    // Set the time to current time
-    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
-    
-    // Return ISO string format that backend expects
-    return date.toISOString();
+    try {
+      let date: Date;
+      
+      // Check if the date is in MM/dd/yyyy format
+      const mmddyyyyRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+      if (mmddyyyyRegex.test(dateString)) {
+        // Parse MM/dd/yyyy format
+        const [month, day, year] = dateString.split('/');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        // Try to parse as standard format
+        date = new Date(dateString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateString);
+        return '';
+      }
+      
+      const now = new Date();
+      
+      // Set the time to current time
+      date.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      
+      // Return ISO string format that backend expects
+      return date.toISOString();
+    } catch (e) {
+      console.error('Error formatting date for backend:', e);
+      return '';
+    }
   }
 
   // Gift management methods for detail view
