@@ -106,7 +106,7 @@ export class ExcelProcessorService {
     const fieldMappings: { [key: string]: string[] } = {
       'orphanId': ['orphan_id', 'orphanid', 'id', 'orphan id', 'orphan-id'],
       'lastName': ['last_name', 'lastname', 'surname', 'family_name', 'last name', 'family name'],
-      'firstName': ['first_name', 'firstname', 'given_name', 'first name', 'given name', 'name'],
+      'firstName': ['first_name', 'firstname', 'given_name', 'first name', 'given name'],
       'dob': ['dob', 'date_of_birth', 'birth_date', 'birthdate', 'date of birth', 'birth date'],
       'placeOfBirth': ['place_of_birth', 'birthplace', 'birth_place', 'place of birth', 'birth place'],
       'gender': ['gender', 'sex'],
@@ -133,12 +133,15 @@ export class ExcelProcessorService {
       if (header) {
         const normalizedHeader = String(header).toLowerCase().trim().replace(/[_\s-]+/g, '_');
         
-        // Find matching field
+        // Find matching field - use exact match or starts with for better precision
         for (const [fieldName, variations] of Object.entries(fieldMappings)) {
-          if (variations.some(variation => 
-            normalizedHeader.includes(variation.replace(/[_\s-]+/g, '_')) ||
-            variation.replace(/[_\s-]+/g, '_').includes(normalizedHeader)
-          )) {
+          if (variations.some(variation => {
+            const normalizedVariation = variation.replace(/[_\s-]+/g, '_');
+            // Exact match or header starts with variation (but not the other way around)
+            return normalizedHeader === normalizedVariation || 
+                   normalizedHeader.startsWith(normalizedVariation + '_') ||
+                   normalizedHeader.startsWith(normalizedVariation);
+          })) {
             headerMap.set(fieldName, index);
             break;
           }
