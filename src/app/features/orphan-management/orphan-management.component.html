@@ -108,68 +108,49 @@
                 </div>
                 <div class="orphan-actions">
                   <button 
-                    class="btn btn-sm btn-outline-primary me-2"
-                    type="button"
+                    class="btn btn-sm btn-outline-info me-1" 
                     (click)="viewIdCard(orphan.id); $event.stopPropagation()"
                     title="View ID Card"
                   >
                     <i class="fas fa-id-card"></i>
                   </button>
-                  <div class="dropdown">
-                    <button 
-                      class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                      (click)="$event.stopPropagation()"
-                    >
-                      <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li>
-                        <a class="dropdown-item" href="#" (click)="viewIdCard(orphan.id); $event.preventDefault()">
-                          <i class="fas fa-id-card me-2"></i>View ID Card
-                        </a>
-                      </li>
-                      <li>
-                        <a class="dropdown-item" href="#" (click)="downloadIdCard(orphan.id); $event.preventDefault()">
-                          <i class="fas fa-download me-2"></i>Download ID Card
-                        </a>
-                      </li>
-                      <li>
-                        <a class="dropdown-item" href="#" (click)="generateTemplate1(orphan.id); $event.preventDefault()">
-                          <i class="fas fa-image me-2"></i>Generate Template 1
-                        </a>
-                      </li>
-                      <li>
-                        <a class="dropdown-item" href="#" (click)="generateTemplate2(orphan.id); $event.preventDefault()">
-                          <i class="fas fa-image me-2"></i>Generate Template 2
-                        </a>
-                      </li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li>
-                        <a class="dropdown-item" href="#" (click)="openAddGiftModal(orphan); $event.preventDefault()">
-                          <i class="fas fa-plus me-2"></i>Add Gift
-                        </a>
-                      </li>
-                      <li>
-                        <a class="dropdown-item" href="#" (click)="openGiftHistoryModal(orphan); $event.preventDefault()">
-                          <i class="fas fa-gift me-2"></i>View Gifts
-                        </a>
-                      </li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li>
-                        <a class="dropdown-item text-danger" href="#" (click)="deleteOrphan(orphan.id); $event.preventDefault()">
-                          <i class="fas fa-trash me-2"></i>Delete
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
+                  <button 
+                    class="btn btn-sm btn-outline-danger" 
+                    (click)="deleteOrphan(orphan.id); $event.stopPropagation()"
+                    title="Delete Orphan"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
                 </div>
               </div>
             </div>
 
+            <!-- Load More Button -->
+            <div *ngIf="filteredOrphans.length > 0 && hasMoreData && !allOrphansLoaded" class="text-center p-3 border-top">
+              <button 
+                class="btn btn-outline-primary btn-sm"
+                (click)="loadMoreOrphans()"
+                [disabled]="isLoadingMore"
+              >
+                <span *ngIf="isLoadingMore" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <i *ngIf="!isLoadingMore" class="fas fa-plus me-2"></i>
+                {{ isLoadingMore ? 'Loading...' : 'Load More Orphans' }}
+              </button>
+              <div class="text-muted small mt-2">
+                Showing {{ filteredOrphans.length }} orphans
+              </div>
+            </div>
+
+            <!-- All Loaded Message -->
+            <div *ngIf="filteredOrphans.length > 0 && allOrphansLoaded" class="text-center p-3 border-top">
+              <div class="text-muted small">
+                <i class="fas fa-check-circle me-1"></i>
+                All {{ filteredOrphans.length }} orphans loaded
+              </div>
+            </div>
+
             <!-- Empty State -->
-            <div *ngIf="filteredOrphans.length === 0" class="text-center p-4">
+            <div *ngIf="filteredOrphans.length === 0 && !isLoading" class="text-center p-4">
               <i class="fas fa-child fa-3x text-muted mb-3"></i>
               <p class="text-muted">No orphans found</p>
             </div>

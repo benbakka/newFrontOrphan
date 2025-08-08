@@ -18,6 +18,15 @@ export class OrphanService {
     return this.http.get<OrphanListDTO[]>(this.apiUrl);
   }
 
+  // Get paginated orphans for Load More functionality
+  getOrphansPaginated(page: number = 0, size: number = 10): Observable<OrphanListDTO[]> {
+    const params = {
+      page: page.toString(),
+      size: size.toString()
+    };
+    return this.http.get<OrphanListDTO[]>(`${this.apiUrl}/paginated`, { params });
+  }
+
   // Get orphan details with full data including family and education
   getOrphanById(id: number): Observable<OrphanDetailDTO> {
     return this.http.get<OrphanDetailDTO>(`${this.apiUrl}/${id}`);

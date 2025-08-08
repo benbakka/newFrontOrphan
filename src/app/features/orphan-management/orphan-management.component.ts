@@ -53,6 +53,13 @@ export class OrphanManagementComponent implements OnInit {
   activeSection = 'basic'; // basic, family, education
   searchTerm = '';
 
+  // Pagination properties
+  currentPage = 0;
+  pageSize = 10;
+  isLoadingMore = false;
+  hasMoreData = true;
+  allOrphansLoaded = false;
+
   // Upload properties
   selectedFile: File | null = null;
   isDragOver = false;
@@ -101,13 +108,76 @@ export class OrphanManagementComponent implements OnInit {
   // Data loading methods
   loadOrphansList(): void {
     this.isLoading = true;
-    this.orphanService.getAllOrphans().subscribe({
+    this.currentPage = 0;
+    this.hasMoreData = true;
+    this.allOrphansLoaded = false;
+    
+    this.orphanService.getOrphansPaginated(this.currentPage, this.pageSize).subscribe({
       next: (orphans) => {
         this.orphansList = orphans;
         this.isLoading = false;
+        
+        // Check if we have more data
+        if (orphans.length < this.pageSize) {
+          this.hasMoreData = false;
+          this.allOrphansLoaded = true;
+        }
       },
       error: (error) => {
         console.error('Error loading orphans:', error);
+        this.isLoading = false;
+        // Fallback to load all orphans if pagination fails
+        this.loadAllOrphans();
+      }
+    });
+  }
+
+  // Load more orphans for pagination
+  loadMoreOrphans(): void {
+    if (this.isLoadingMore || !this.hasMoreData || this.allOrphansLoaded) {
+      return;
+    }
+
+    this.isLoadingMore = true;
+    this.currentPage++;
+
+    this.orphanService.getOrphansPaginated(this.currentPage, this.pageSize).subscribe({
+      next: (orphans) => {
+        if (orphans.length > 0) {
+          // Append new orphans to existing list
+          this.orphansList = [...this.orphansList, ...orphans];
+          
+          // Check if we have more data
+          if (orphans.length < this.pageSize) {
+            this.hasMoreData = false;
+            this.allOrphansLoaded = true;
+          }
+        } else {
+          this.hasMoreData = false;
+          this.allOrphansLoaded = true;
+        }
+        
+        this.isLoadingMore = false;
+      },
+      error: (error) => {
+        console.error('Error loading more orphans:', error);
+        this.isLoadingMore = false;
+        this.currentPage--; // Revert page increment on error
+      }
+    });
+  }
+
+  // Fallback method to load all orphans if pagination fails
+  private loadAllOrphans(): void {
+    this.orphanService.getAllOrphans().subscribe({
+      next: (orphans) => {
+        this.orphansList = orphans;
+        this.hasMoreData = false;
+        this.allOrphansLoaded = true;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading all orphans:', error);
         this.isLoading = false;
       }
     });
@@ -393,13 +463,48 @@ export class OrphanManagementComponent implements OnInit {
     if (confirm('Are you sure you want to delete this orphan?')) {
       this.orphanService.deleteOrphan(id).subscribe({
         next: () => {
-          this.loadOrphansList();
+          // Remove the orphan from the local list without refreshing
+          this.orphansList = this.orphansList.filter(orphan => orphan.id !== id);
+          
+          // If the deleted orphan was selected, clear the selection
           if (this.selectedOrphan?.id === id) {
-            this.cancelEdit();
+            this.selectedOrphan = null;
+            this.isEditing = false;
           }
+          
+          console.log('Orphan deleted successfully!');
         },
         error: (error) => {
           console.error('Error deleting orphan:', error);
+          
+          // Check if the error is 'not found' (orphan already deleted)
+          let isNotFoundError = false;
+          
+          if (error.status === 500) {
+            // Check different possible error message formats
+            const errorMessage = typeof error.error === 'string' ? error.error : 
+                               error.message || 
+                               JSON.stringify(error.error) || 
+                               '';
+            
+            isNotFoundError = errorMessage.toLowerCase().includes('not found') || 
+                             errorMessage.includes('Orphan record not found');
+          }
+          
+          if (isNotFoundError) {
+            // Orphan was already deleted, remove it from the list anyway
+            this.orphansList = this.orphansList.filter(orphan => orphan.id !== id);
+            
+            if (this.selectedOrphan?.id === id) {
+              this.selectedOrphan = null;
+              this.isEditing = false;
+            }
+            
+            alert('Orphan was already deleted. Removing from list.');
+          } else {
+            // Other errors
+            alert('Error deleting orphan. Please try again.');
+          }
         }
       });
     }
