@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as XLSX from 'xlsx';
 import { DateParserUtil } from '../utils/date-parser.util';
+import { ImageDownloaderUtil } from '../utils/image-downloader.util';
 import { OrphanDetailDTO } from '../models/orphan-detail.dto';
 
 export interface ExcelProcessingResult {
@@ -8,6 +9,7 @@ export interface ExcelProcessingResult {
   data?: OrphanDetailDTO[];
   errors?: string[];
   warnings?: string[];
+  photoFiles?: Map<string, File>; // Map orphanId to photo file
 }
 
 @Injectable({
@@ -15,7 +17,10 @@ export interface ExcelProcessingResult {
 })
 export class ExcelProcessorService {
 
-  constructor(private dateParser: DateParserUtil) {}
+  constructor(
+    private dateParser: DateParserUtil,
+    private imageDownloader: ImageDownloaderUtil
+  ) {}
 
   /**
    * Process Excel file and return parsed orphan data with proper date handling
@@ -33,7 +38,7 @@ export class ExcelProcessorService {
         };
       }
 
-      const result = this.parseExcelData(rawData as any[][]);
+      const result = await this.parseExcelData(rawData as any[][]);
       return result;
 
     } catch (error) {
@@ -64,24 +69,64 @@ export class ExcelProcessorService {
     });
   }
 
-  private parseExcelData(rawData: any[][]): ExcelProcessingResult {
+  private async parseExcelData(rawData: any[][]): Promise<ExcelProcessingResult> {
     const headers = rawData[0];
     const dataRows = rawData.slice(1);
     
     const errors: string[] = [];
     const warnings: string[] = [];
     const orphans: OrphanDetailDTO[] = [];
+    const photoFiles = new Map<string, File>();
 
     // Map common header variations to our expected field names
     const headerMap = this.createHeaderMap(headers);
 
-    dataRows.forEach((row, index) => {
+    // Process each row and collect photo URLs
+    for (let index = 0; index < dataRows.length; index++) {
+      const row = dataRows[index];
       const rowNumber = index + 2; // +2 because we start from row 2 (after header)
       
       try {
         const orphan = this.parseOrphanRow(row, headerMap, rowNumber);
         
         if (orphan) {
+          // Check if photo is a URL and download it
+          const photoColumnIndex = headerMap.get('photo');
+          if (photoColumnIndex !== undefined && photoColumnIndex < row.length) {
+            const photoValue = row[photoColumnIndex];
+            
+            if (photoValue && typeof photoValue === 'string') {
+              // Clean and validate the photo value
+              const cleanPhotoValue = photoValue.toString().trim();
+              
+              // Skip invalid values like "Accident", "None", "N/A", etc.
+              const invalidValues = ['accident', 'none', 'n/a', 'na', 'null', 'undefined', 'no photo', 'no image'];
+              if (invalidValues.includes(cleanPhotoValue.toLowerCase())) {
+                warnings.push(`Row ${rowNumber}: Skipping invalid photo value: "${cleanPhotoValue}"`);
+              } else if (this.imageDownloader.isImageUrl(cleanPhotoValue)) {
+                try {
+                  // Download the image from URL
+                  const photoFile = await this.imageDownloader.downloadImageFromUrl(
+                    cleanPhotoValue, 
+                    `orphan_${orphan.orphanId}_photo.jpg`
+                  );
+                  
+                  if (photoFile) {
+                    // Store the downloaded file in the map
+                    photoFiles.set(orphan.orphanId, photoFile);
+                    warnings.push(`Row ${rowNumber}: Successfully downloaded photo from URL: ${cleanPhotoValue}`);
+                  } else {
+                    warnings.push(`Row ${rowNumber}: Failed to download photo from URL: ${cleanPhotoValue}`);
+                  }
+                } catch (photoError) {
+                  warnings.push(`Row ${rowNumber}: Error downloading photo: ${photoError instanceof Error ? photoError.message : 'Unknown error'}`);
+                }
+              } else if (cleanPhotoValue.length > 0) {
+                warnings.push(`Row ${rowNumber}: Invalid photo URL format: "${cleanPhotoValue}"`);
+              }
+            }
+          }
+          
           orphans.push(orphan);
         } else {
           warnings.push(`Row ${rowNumber}: Skipped due to missing required fields`);
@@ -89,13 +134,14 @@ export class ExcelProcessorService {
       } catch (error) {
         errors.push(`Row ${rowNumber}: ${error instanceof Error ? error.message : 'Parsing error'}`);
       }
-    });
+    }
 
     return {
       success: errors.length === 0,
       data: orphans,
       errors: errors.length > 0 ? errors : undefined,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
+      photoFiles: photoFiles.size > 0 ? photoFiles : undefined
     };
   }
 
@@ -114,6 +160,7 @@ export class ExcelProcessorService {
       'country': ['country', 'nationality', 'nation'],
       'healthStatus': ['health_status', 'health', 'medical_status', 'health status', 'medical status'],
       'specialNeeds': ['special_needs', 'special needs', 'medical_needs', 'medical needs', 'disabilities'],
+      'photo': ['photo', 'image', 'picture', 'avatar', 'profile_photo', 'profile_image', 'profile_picture'],
       // Family information
       'fatherName': ['father_name', 'father name', 'father'],
       'fatherDateOfDeath': ['father_death_date', 'father death date', 'father_dod'],

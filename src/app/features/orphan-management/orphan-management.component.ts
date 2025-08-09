@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
+import { ExcelProcessingResult } from '../../core/services/excel-processor.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatNativeDateModule, MAT_DATE_LOCALE } from '@angular/material/core';
 import { Router } from '@angular/router';
@@ -16,6 +17,7 @@ import { GiftService } from '../../core/services/gift.service';
 import { DonorService } from '../../core/services/donor.service';
 import { ExcelProcessorService } from '../../core/services/excel-processor.service';
 import { ExcelGeneratorService } from '../../core/services/excel-generator.service';
+import { ProxyImageComponent } from '../../shared/components/proxy-image/proxy-image.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -28,7 +30,8 @@ import { environment } from '../../../environments/environment';
     MatDatepickerModule,
     MatInputModule,
     MatFormFieldModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    ProxyImageComponent
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'en-US' }
@@ -52,6 +55,7 @@ export class OrphanManagementComponent implements OnInit {
   // UI state
   activeSection = 'basic'; // basic, family, education
   searchTerm = '';
+  searchTimeout: any = null;
 
   // Pagination properties
   currentPage = 0;
@@ -112,6 +116,12 @@ export class OrphanManagementComponent implements OnInit {
     this.hasMoreData = true;
     this.allOrphansLoaded = false;
     
+    // If there's a search term, use search instead of pagination
+    if (this.searchTerm && this.searchTerm.trim()) {
+      this.searchOrphans();
+      return;
+    }
+    
     this.orphanService.getOrphansPaginated(this.currentPage, this.pageSize).subscribe({
       next: (orphans) => {
         this.orphansList = orphans;
@@ -130,6 +140,52 @@ export class OrphanManagementComponent implements OnInit {
         this.loadAllOrphans();
       }
     });
+  }
+
+  // Search orphans by multiple criteria (name, age, gender, ID, place of birth, location)
+  searchOrphans(): void {
+    if (!this.searchTerm || this.searchTerm.trim() === '') {
+      this.loadOrphansList();
+      return;
+    }
+
+    this.isLoading = true;
+    this.orphanService.searchOrphans(this.searchTerm).subscribe({
+      next: (orphans) => {
+        this.orphansList = orphans;
+        this.isLoading = false;
+        // Disable pagination when searching
+        this.hasMoreData = false;
+        this.allOrphansLoaded = true;
+      },
+      error: (error) => {
+        console.error('Error searching orphans:', error);
+        this.isLoading = false;
+        // Fallback to show all orphans on search error
+        this.loadAllOrphans();
+      }
+    });
+  }
+
+  // Handle search input changes
+  onSearchChange(): void {
+    // Debounce search to avoid too many API calls
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+    
+    this.searchTimeout = setTimeout(() => {
+      this.searchOrphans();
+    }, 300); // 300ms delay
+  }
+
+  // Clear search and reload all orphans
+  clearSearch(): void {
+    this.searchTerm = '';
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+    this.loadOrphansList();
   }
 
   // Load more orphans for pagination
@@ -640,14 +696,9 @@ export class OrphanManagementComponent implements OnInit {
 
   // Utility methods
   get filteredOrphans(): OrphanListDTO[] {
-    if (!this.searchTerm) return this.orphansList;
-    
-    return this.orphansList.filter(orphan =>
-      orphan.firstName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      orphan.lastName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      orphan.orphanId.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      orphan.location.toLowerCase().includes(this.searchTerm.toLowerCase())
-    );
+    // Since we're now using backend search, just return the orphansList
+    // The backend handles all filtering based on searchTerm
+    return this.orphansList;
   }
 
   getFullName(orphan: OrphanListDTO): string {
@@ -668,20 +719,62 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   getOrphanPhotoUrl(photo?: string): string {
-    if (!photo) {
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNTAgMTYwQzUwIDEzNS4xNDcgNzAuMTQ3IDExNSA5NSAxMTVIMTA1QzEyOS44NTMgMTE1IDE1MCAxMzUuMTQ3IDE1MCAxNjBWMjAwSDUwVjE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+    const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNTAgMTYwQzUwIDEzNS4xNDcgNzAuMTQ3IDExNSA5NSAxMTVIMTA1QzEyOS44NTMgMTE1IDE1MCAxMzUuMTQ3IDE1MCAxNjBWMjAwSDUwVjE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+    
+    if (!photo || photo.trim() === '') {
+      return defaultAvatar;
     }
     
-    // If the photo is a relative path, construct the full URL
-    if (photo.startsWith('/uploads') || photo.startsWith('uploads')) {
-      return `${environment.apiUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
-    } else if (photo.startsWith('http')) {
-      // Already a full URL
-      return photo;
-    } else {
-      // Base64 or other format
-      return photo;
+    // Clean the photo value
+    const cleanPhoto = photo.toString().trim();
+    
+    // Check for invalid values that should use default avatar
+    const invalidValues = ['accident', 'none', 'n/a', 'na', 'null', 'undefined', 'no photo', 'no image'];
+    if (invalidValues.includes(cleanPhoto.toLowerCase())) {
+      return defaultAvatar;
     }
+    
+    // Check for upload path format (starts with /uploads/ or uploads/)
+    if (cleanPhoto.includes('/uploads/') || cleanPhoto.startsWith('uploads/')) {
+      // Valid upload path
+      return `${environment.apiUrl}${cleanPhoto.startsWith('/') ? '' : '/'}${cleanPhoto}`;
+    } else if (cleanPhoto.startsWith('http')) {
+      // Valid full URL
+      return cleanPhoto;
+    } else if (cleanPhoto.startsWith('data:image/')) {
+      // Valid base64 image
+      return cleanPhoto;
+    } else if (this.isValidImageExtension(cleanPhoto)) {
+      // Valid image file with extension
+      return cleanPhoto;
+    } else {
+      // Invalid photo value, return default avatar without logging warning for known invalid values
+      if (!invalidValues.includes(cleanPhoto.toLowerCase())) {
+        console.warn(`Invalid photo value detected: "${cleanPhoto}". Using default avatar.`);
+      }
+      return defaultAvatar;
+    }
+  }
+
+  private isValidImageExtension(filename: string): boolean {
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    const lowerFilename = filename.toLowerCase();
+    return validExtensions.some(ext => lowerFilename.endsWith(ext));
+  }
+
+  getPhotoPreviewUrl(): string {
+    // If we have a photo preview from file upload, use it
+    if (this.photoPreview && this.photoPreview.startsWith('data:image/')) {
+      return this.photoPreview;
+    }
+    
+    // If we have a selected orphan, use their photo with validation
+    if (this.selectedOrphan?.photo) {
+      return this.getOrphanPhotoUrl(this.selectedOrphan.photo);
+    }
+    
+    // Default avatar
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNTAgMTYwQzUwIDEzNS4xNDcgNzAuMTQ3IDExNSA5NSAxMTVIMTA1QzEyOS44NTMgMTE1IDE1MCAxMzUuMTQ3IDE1MCAxNjBWMjAwSDUwVjE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
   }
 
   trackByOrphanId(index: number, orphan: OrphanListDTO): number {
@@ -808,129 +901,52 @@ export class OrphanManagementComponent implements OnInit {
 
     // Simulate progress for UI feedback
     const progressInterval = setInterval(() => {
-      if (this.uploadProgress < 30) {
-        this.uploadProgress += 5;
+      if (this.uploadProgress < 90) {
+        this.uploadProgress += Math.random() * 10;
       }
-    }, 100);
+    }, 200);
 
     try {
-      // First, process the Excel file locally with date parsing to validate and show detailed feedback
-      this.uploadProgress = 30;
-      const processingResult = await this.excelProcessor.processExcelFile(this.selectedFile);
-      
-      if (!processingResult.success) {
-        clearInterval(progressInterval);
-        this.uploadProgress = 0;
-        
-        let errorMessage = 'Failed to process Excel file.';
-        if (processingResult.errors && processingResult.errors.length > 0) {
-          errorMessage += '\n\nErrors:\n' + processingResult.errors.join('\n');
-        }
-        if (processingResult.warnings && processingResult.warnings.length > 0) {
-          errorMessage += '\n\nWarnings:\n' + processingResult.warnings.join('\n');
-        }
-        
-        this.uploadResults = {
-          success: false,
-          message: errorMessage
-        };
-        
-        this.isUploading = false;
-        return;
-      }
-
-      // Update progress
-      this.uploadProgress = 60;
-      
-      // Generate a corrected Excel file with standardized dates and upload it
-      if (processingResult.data && processingResult.data.length > 0) {
-        try {
-          // Generate corrected Excel file with standardized date formats
-          const correctedFile = this.excelGenerator.generateCorrectedExcelFile(
-            processingResult.data, 
-            this.selectedFile.name
-          );
-          
-          // Upload the corrected file
-          this.orphanService.uploadExcelFile(correctedFile).subscribe({
-            next: (response) => {
-              clearInterval(progressInterval);
-              this.uploadProgress = 100;
-              
-              let message = `Successfully processed ${response.length} orphan(s) with corrected date formats.`;
-              if (processingResult.warnings && processingResult.warnings.length > 0) {
-                message += '\n\nDate processing notes:\n' + processingResult.warnings.join('\n');
-              }
-              
-              this.uploadResults = {
-                success: true,
-                message: message,
-                count: response.length
-              };
-              
-              // Refresh the orphan list
-              this.loadOrphansList();
-              
-              // Close modal after 3 seconds
-              setTimeout(() => {
-                this.closeUploadModal();
-                this.resetUploadState();
-              }, 3000);
-              
-              this.isUploading = false;
-            },
-            error: (error) => {
-              clearInterval(progressInterval);
-              this.uploadProgress = 0;
-              
-              let errorMessage = 'Failed to upload corrected Excel file to server.';
-              if (error.error?.message) {
-                errorMessage += `\n\nServer error: ${error.error.message}`;
-              }
-              if (processingResult.warnings && processingResult.warnings.length > 0) {
-                errorMessage += '\n\nDate processing notes:\n' + processingResult.warnings.join('\n');
-              }
-              
-              this.uploadResults = {
-                success: false,
-                message: errorMessage
-              };
-              
-              this.isUploading = false;
-            }
-          });
-        } catch (fileGenerationError: any) {
+      // Simple upload directly to backend - let backend handle everything
+      this.orphanService.uploadExcelFile(this.selectedFile).subscribe({
+        next: (response: OrphanDetailDTO[]) => {
           clearInterval(progressInterval);
-          this.uploadProgress = 0;
+          this.uploadProgress = 100;
           
           this.uploadResults = {
-            success: false,
-            message: `Failed to generate corrected Excel file: ${fileGenerationError.message || 'Unknown error'}`
+            success: true,
+            message: `Successfully uploaded ${response.length} orphan records.`,
+            count: response.length
           };
           
           this.isUploading = false;
+          this.loadAllOrphans(); // Refresh the orphan list
+        },
+        error: (error) => {
+          clearInterval(progressInterval);
+          this.uploadProgress = 0;
+          
+          let errorMessage = 'Failed to upload Excel file.';
+          if (error.error && error.error.message) {
+            errorMessage = error.error.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          this.uploadResults = { 
+            success: false, 
+            message: errorMessage
+          };
+          this.isUploading = false;
         }
-      } else {
-        clearInterval(progressInterval);
-        this.uploadProgress = 0;
-        
-        this.uploadResults = {
-          success: false,
-          message: 'No valid orphan data found in the Excel file.'
-        };
-        
-        this.isUploading = false;
-      }
-      
-    } catch (error: any) {
+      });
+    } catch (error) {
       clearInterval(progressInterval);
       this.uploadProgress = 0;
-      
-      this.uploadResults = {
-        success: false,
-        message: `Failed to process Excel file: ${error.message || 'Unknown error'}`
+      this.uploadResults = { 
+        success: false, 
+        message: 'An unexpected error occurred during file upload.' 
       };
-      
       this.isUploading = false;
     }
   }
@@ -941,6 +957,59 @@ export class OrphanManagementComponent implements OnInit {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+  
+  /**
+   * Finalizes the upload process after both Excel data and photos have been processed
+   * @param response The response from the Excel upload API
+   * @param processingResult The result of the Excel processing
+   * @param uploadedPhotos Number of photos successfully uploaded
+   * @param photoUploadErrors Array of error messages from photo uploads
+   */
+  finalizeUpload(response: OrphanDetailDTO[], processingResult: ExcelProcessingResult, uploadedPhotos: number, photoUploadErrors: string[]): void {
+    this.uploadProgress = 100;
+    
+    // Prepare success message with orphan processing details
+    let message = `Successfully processed ${response.length} orphan(s).`;
+    
+    // Add photo upload details if applicable
+    if (processingResult.photoFiles && processingResult.photoFiles.size > 0) {
+      message += ` ${uploadedPhotos} of ${processingResult.photoFiles.size} photos were uploaded.`;
+      
+      // Handle CORS errors specifically
+      const corsErrors = photoUploadErrors.filter(error => error.includes('CORS error'));
+      const otherErrors = photoUploadErrors.filter(error => !error.includes('CORS error'));
+      
+      if (corsErrors.length > 0) {
+        message += `\n\nCORS errors occurred: The backend server may not be configured to accept cross-origin requests for photo uploads. `;
+        message += `Please ensure the backend API has CORS properly configured.`;
+      }
+      
+      // Add other photo upload errors if any
+      if (otherErrors.length > 0) {
+        message += `\n\nSome photos could not be uploaded due to errors: `;
+        // Limit the number of errors shown to avoid extremely long messages
+        const maxErrorsToShow = 3;
+        if (otherErrors.length <= maxErrorsToShow) {
+          message += otherErrors.join('\n');
+        } else {
+          message += otherErrors.slice(0, maxErrorsToShow).join('\n');
+          message += `\n...and ${otherErrors.length - maxErrorsToShow} more errors.`;
+        }
+      }
+    }
+    
+    this.uploadResults = {
+      success: true,
+      message: message,
+      count: response.length
+    };
+    
+    // Refresh the orphans list to show updated data
+    this.loadOrphansList();
+    this.closeUploadModal();
+    this.resetUploadState();
+    this.isUploading = false;
   }
 
   // Download Excel template

@@ -78,6 +78,26 @@ export class OrphanService {
     return this.http.post<OrphanDetailDTO[]>(`${this.apiUrl}/upload`, formData);
   }
 
+  // Search orphans by multiple criteria
+  searchOrphans(query: string): Observable<any[]> {
+    if (!query || query.trim() === '') {
+      return this.getAllOrphans();
+    }
+    return this.http.get<any[]>(`${this.apiUrl}/search`, {
+      params: { query: query.trim() }
+    });
+  }
+  
+  // Update orphan photo only
+  updateOrphanPhoto(id: number, photo: File): Observable<OrphanDetailDTO> {
+    const formData = new FormData();
+    formData.append('photo', photo);
+    
+    // Note: CORS headers must be set on the server side, not client side
+    // The backend API needs to be configured to allow cross-origin requests
+    return this.http.patch<OrphanDetailDTO>(`${this.apiUrl}/${id}/photo`, formData);
+  }
+
   // Helper method to convert DTO to entity format for backend
   private convertDTOToEntity(dto: OrphanDetailDTO): any {
     return {
