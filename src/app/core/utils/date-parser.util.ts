@@ -8,6 +8,7 @@ export class DateParserUtil {
   /**
    * Parse various date formats from Excel and return a standardized ISO date string
    * Handles formats: 2025-01-10, 2000/23/02, 02/23/2000, 10/01/2025
+   * Also handles Excel serial date numbers
    */
   parseExcelDate(dateValue: any): string | null {
     if (!dateValue) {
@@ -17,6 +18,14 @@ export class DateParserUtil {
     // If it's already a Date object (from Excel parsing)
     if (dateValue instanceof Date) {
       return this.formatToISO(dateValue);
+    }
+
+    // Handle Excel serial date numbers
+    if (typeof dateValue === 'number') {
+      const date = this.excelDateToJSDate(dateValue);
+      if (this.isValidDate(date)) {
+        return this.formatToISO(date);
+      }
     }
 
     // Convert to string for parsing
@@ -197,6 +206,27 @@ export class DateParserUtil {
 
   private formatToISO(date: Date): string {
     return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+  }
+
+  /**
+   * Convert Excel serial date number to JavaScript Date object
+   * Excel dates are days since January 1, 1900 (with a leap year bug)
+   * @param serial Excel serial date number
+   * @returns JavaScript Date object
+   */
+  private excelDateToJSDate(serial: number): Date {
+    // Excel incorrectly treats 1900 as a leap year, so we need to adjust for dates after Feb 28, 1900
+    // This adds 1 day for the non-existent Feb 29, 1900
+    const excelEpoch = new Date(1900, 0, 1); // January 1, 1900
+    const daysOffset = serial - 2; // Subtract 2 to account for Excel's leap year bug
+    
+    // If the date is before March 1, 1900, no adjustment needed
+    if (serial < 61) { // Before March 1, 1900
+      return new Date(excelEpoch.getTime() + (serial - 1) * 24 * 60 * 60 * 1000);
+    }
+    
+    // For dates after Feb 28, 1900, adjust for the leap year bug
+    return new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
   }
 
   /**

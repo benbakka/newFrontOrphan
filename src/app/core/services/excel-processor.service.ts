@@ -57,7 +57,12 @@ export class ExcelProcessorService {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          // Configure XLSX to properly handle dates
+          const workbook = XLSX.read(data, { 
+            type: 'array', 
+            cellDates: true,
+            dateNF: 'mm/dd/yyyy' // Specify the expected date format
+          });
           resolve(workbook);
         } catch (error) {
           reject(error);

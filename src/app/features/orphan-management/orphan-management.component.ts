@@ -6,6 +6,8 @@ import { MatInputModule } from '@angular/material/input';
 import { ExcelProcessingResult } from '../../core/services/excel-processor.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatNativeDateModule, MAT_DATE_LOCALE } from '@angular/material/core';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { PdfService } from '../../core/services/pdf.service';
 import { OrphanService } from '../../core/services/orphan.service';
@@ -17,7 +19,7 @@ import { GiftService } from '../../core/services/gift.service';
 import { DonorService } from '../../core/services/donor.service';
 import { ExcelProcessorService } from '../../core/services/excel-processor.service';
 import { ExcelGeneratorService } from '../../core/services/excel-generator.service';
-import { ProxyImageComponent } from '../../shared/components/proxy-image/proxy-image.component';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -31,7 +33,8 @@ import { environment } from '../../../environments/environment';
     MatInputModule,
     MatFormFieldModule,
     MatNativeDateModule,
-    ProxyImageComponent
+    MatDialogModule,
+    MatSnackBarModule
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'en-US' }
@@ -93,7 +96,9 @@ export class OrphanManagementComponent implements OnInit {
     private giftService: GiftService,
     private donorService: DonorService,
     private excelProcessor: ExcelProcessorService,
-    private excelGenerator: ExcelGeneratorService
+    private excelGenerator: ExcelGeneratorService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {
     this.orphanForm = this.createOrphanForm();
     this.giftForm = this.createGiftForm();
@@ -779,6 +784,46 @@ export class OrphanManagementComponent implements OnInit {
 
   trackByOrphanId(index: number, orphan: OrphanListDTO): number {
     return orphan.id;
+  }
+
+  // Delete all orphans with confirmation
+  deleteAllOrphans(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '450px',
+      data: {
+        title: 'Delete All Orphans',
+        message: 'Are you sure you want to delete ALL orphans? This action cannot be undone!',
+        confirmText: 'Delete All'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.isLoading = true;
+        this.orphanService.deleteAllOrphans().subscribe({
+          next: () => {
+            this.isLoading = false;
+            this.snackBar.open('All orphans have been deleted successfully', 'Close', {
+              duration: 5000,
+              panelClass: ['success-snackbar']
+            });
+            // Clear the current list and reset search
+            this.orphansList = [];
+            this.searchTerm = '';
+            this.currentPage = 0;
+            this.hasMoreData = true;
+          },
+          error: (error) => {
+            this.isLoading = false;
+            console.error('Error deleting all orphans:', error);
+            this.snackBar.open('Failed to delete all orphans', 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
+      }
+    });
   }
 
   // Debug method to check form validation

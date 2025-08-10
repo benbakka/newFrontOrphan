@@ -78,6 +78,11 @@ export class OrphanService {
     return this.http.post<OrphanDetailDTO[]>(`${this.apiUrl}/upload`, formData);
   }
 
+  // Delete all orphans
+  deleteAllOrphans(): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/all`);
+  }
+
   // Search orphans by multiple criteria
   searchOrphans(query: string): Observable<any[]> {
     if (!query || query.trim() === '') {

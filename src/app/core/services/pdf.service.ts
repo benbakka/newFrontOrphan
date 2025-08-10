@@ -368,7 +368,7 @@ export class PdfService {
           overflow: hidden; 
           text-overflow: ellipsis;
         ">
-          ${orphan.location || 'N/A'}
+          ${orphan.location || 'N/A'}, ${orphan.country || 'N/A'}
         </h1>
       </div>
     `;
@@ -489,7 +489,7 @@ export class PdfService {
           overflow: hidden; 
           text-overflow: ellipsis;
         ">
-          ${orphan.location || 'N/A'}
+          ${orphan.location || 'N/A'}, ${orphan.country || 'N/A'}
         </h1>
       </div>
     `;
