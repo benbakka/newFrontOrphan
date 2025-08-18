@@ -1,0 +1,309 @@
+<div class="gift-type-management-container">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">
+          <i class="fas fa-box me-2"></i>
+          Fund Box Management
+        </h4>
+        <div class="btn-group">
+          <button 
+            class="btn btn-primary"
+            (click)="openForm()"
+            [disabled]="isLoading"
+          >
+            <i class="fas fa-plus me-2"></i>
+            Add New Gift Type
+          </button>
+          <button 
+            class="btn btn-info"
+            (click)="loadGiftTypes()"
+            [disabled]="isLoading"
+          >
+            <i class="fas fa-sync-alt me-2"></i>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ error }}
+    <button type="button" class="btn-close" (click)="clearMessages()"></button>
+  </div>
+
+  <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    {{ success }}
+    <button type="button" class="btn-close" (click)="clearMessages()"></button>
+  </div>
+
+  <div class="row">
+    <!-- Left Panel - Gift Types List -->
+    <div class="col-lg-8 col-md-7">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-3">
+              <i class="fas fa-list me-2"></i>
+              Gift Types & Fund Balances ({{ filteredGiftTypes.length }})
+            </h6>
+            <!-- Search -->
+            <div class="input-group" style="max-width: 300px;">
+              <span class="input-group-text">
+                <i class="fas fa-search"></i>
+              </span>
+              <input 
+                type="text" 
+                class="form-control" 
+                placeholder="Search gift types..."
+                [(ngModel)]="searchTerm"
+                (input)="filterGiftTypes()"
+              >
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <!-- Loading State -->
+          <div *ngIf="isLoading" class="text-center p-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading gift types...</p>
+          </div>
+
+          <!-- Gift Types Table -->
+          <div *ngIf="!isLoading" class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Gift Type</th>
+                  <th class="text-end">Total Donations</th>
+                  <th class="text-end">Total Expenses</th>
+                  <th class="text-end">Current Balance</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  *ngFor="let giftType of filteredGiftTypes; trackBy: trackByGiftTypeId" 
+                  [class.table-active]="selectedGiftType?.id === giftType.id"
+                  (click)="selectGiftType(giftType)"
+                  style="cursor: pointer;"
+                >
+                  <td>
+                    <div>
+                      <div class="fw-bold">{{ giftType.name }}</div>
+                      <div class="text-muted small" *ngIf="giftType.description">
+                        {{ giftType.description }}
+                      </div>
+                      <div class="text-muted small">
+                        Created: {{ formatDate(giftType.createdDate) }}
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-end">
+                    <span class="text-success fw-bold">
+                      {{ formatCurrency(giftType.totalDonations || 0) }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <span class="text-danger fw-bold">
+                      {{ formatCurrency(giftType.totalExpenses || 0) }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <span class="fw-bold" [ngClass]="getBalanceClass(giftType.balance || 0)">
+                      <i [ngClass]="getBalanceIcon(giftType.balance || 0)" class="me-1"></i>
+                      {{ formatCurrency(giftType.balance || 0) }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge" [ngClass]="{'bg-success': giftType.isActive, 'bg-secondary': !giftType.isActive}">
+                      {{ giftType.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button 
+                        class="btn btn-outline-primary" 
+                        (click)="openForm(giftType); $event.stopPropagation()"
+                        title="Edit Gift Type"
+                      >
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button 
+                        class="btn btn-outline-danger" 
+                        (click)="deactivateGiftType(giftType.id, giftType.name); $event.stopPropagation()"
+                        title="Deactivate Gift Type"
+                        [disabled]="!giftType.isActive"
+                      >
+                        <i class="fas fa-ban"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Empty State -->
+            <div *ngIf="filteredGiftTypes.length === 0" class="text-center p-4">
+              <i class="fas fa-box fa-3x text-muted mb-3"></i>
+              <h6 class="text-muted">No gift types found</h6>
+              <p class="text-muted small mb-0">
+                {{ searchTerm ? 'Try adjusting your search criteria' : 'Start by adding a new gift type' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel - Details/Form -->
+    <div class="col-lg-4 col-md-5">
+      <!-- Form -->
+      <div class="card h-100" *ngIf="isFormVisible">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-box me-2"></i>
+              {{ isEditMode ? 'Edit Gift Type' : 'Add New Gift Type' }}
+            </h6>
+            <button type="button" class="btn-close" (click)="closeForm()"></button>
+          </div>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="giftTypeForm" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label class="form-label">Gift Type Name *</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="name" 
+                placeholder="Enter gift type name"
+              >
+              <div *ngIf="giftTypeForm.get('name')?.invalid && giftTypeForm.get('name')?.touched" class="text-danger small">
+                <div *ngIf="giftTypeForm.get('name')?.errors?.['required']">Gift type name is required</div>
+                <div *ngIf="giftTypeForm.get('name')?.errors?.['minlength']">Name must be at least 3 characters</div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea 
+                class="form-control" 
+                formControlName="description" 
+                rows="3"
+                placeholder="Enter description (optional)"
+              ></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end">
+              <button type="button" class="btn btn-secondary me-2" (click)="closeForm()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="giftTypeForm.invalid || isSubmitting">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <i *ngIf="!isSubmitting" class="fas fa-save me-2"></i>
+                {{ isEditMode ? 'Update Gift Type' : 'Create Gift Type' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Gift Type Details -->
+      <div class="card h-100" *ngIf="!isFormVisible && selectedGiftType">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-info-circle me-2"></i>
+              Gift Type Details
+            </h6>
+            <button class="btn btn-primary btn-sm" (click)="openForm(selectedGiftType)">
+              <i class="fas fa-edit me-2"></i>
+              Edit
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label text-muted">Name</label>
+            <div class="fw-bold">{{ selectedGiftType.name }}</div>
+          </div>
+
+          <div class="mb-3" *ngIf="selectedGiftType.description">
+            <label class="form-label text-muted">Description</label>
+            <div>{{ selectedGiftType.description }}</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-muted">Status</label>
+            <div>
+              <span class="badge" [ngClass]="{'bg-success': selectedGiftType.isActive, 'bg-secondary': !selectedGiftType.isActive}">
+                {{ selectedGiftType.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-muted">Created Date</label>
+            <div>{{ formatDate(selectedGiftType.createdDate) }}</div>
+          </div>
+
+          <hr>
+
+          <div class="mb-3">
+            <label class="form-label text-muted">Financial Summary</label>
+            <div class="row text-center">
+              <div class="col-12 mb-2">
+                <div class="stat-card">
+                  <div class="stat-value text-success">{{ formatCurrency(selectedGiftType.totalDonations || 0) }}</div>
+                  <div class="stat-label">Total Donations</div>
+                </div>
+              </div>
+              <div class="col-12 mb-2">
+                <div class="stat-card">
+                  <div class="stat-value text-danger">{{ formatCurrency(selectedGiftType.totalExpenses || 0) }}</div>
+                  <div class="stat-label">Total Expenses</div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="stat-card">
+                  <div class="stat-value" [ngClass]="getBalanceClass(selectedGiftType.balance || 0)">
+                    <i [ngClass]="getBalanceIcon(selectedGiftType.balance || 0)" class="me-1"></i>
+                    {{ formatCurrency(selectedGiftType.balance || 0) }}
+                  </div>
+                  <div class="stat-label">Current Balance</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="selectedGiftType.balance !== undefined && selectedGiftType.balance <= 0" class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Low Balance Alert:</strong> This gift type has insufficient funds for new expenses.
+          </div>
+        </div>
+      </div>
+
+      <!-- Welcome State -->
+      <div class="card h-100" *ngIf="!isFormVisible && !selectedGiftType">
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <div class="welcome-state text-center">
+            <i class="fas fa-box fa-3x text-muted mb-3"></i>
+            <h5>Fund Box Management</h5>
+            <p class="text-muted">Select a gift type to view details and balance information, or create a new gift type to start managing funds.</p>
+            <button class="btn btn-primary" (click)="openForm()">
+              <i class="fas fa-plus me-2"></i>
+              Add New Gift Type
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,976 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { OrphanService } from '../../core/services/orphan.service';
+import { PdfService } from '../../core/services/pdf.service';
+import { SponsorshipService } from '../../core/services/sponsorship.service';
+import { DonationService } from '../../core/services/donation.service';
+import { DonorService } from '../../core/services/donor.service';
+import { OrphanDetailDTO, SponsorshipInfo, GiftInfo } from '../../core/models/orphan-detail.dto';
+import { Sponsorship, CreateSponsorshipRequest, CreateGiftRequest, SponsorshipType, SponsorshipWithGifts } from '../../core/models/sponsorship.model';
+import { Donor } from '../../core/models/donor.model';
+import { CreateDonationRequest } from '../../core/models/donation.model';
+import { environment } from '../../../environments/environment';
+
+@Component({
+  selector: 'app-orphan-id-card',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './orphan-id-card.component.html',
+  styleUrls: ['./orphan-id-card.component.scss']
+})
+export class OrphanIdCardComponent implements OnInit {
+  orphan: OrphanDetailDTO | null = null;
+  isLoading = true;
+  error: string | null = null;
+  issueDate = new Date().toISOString();
+  validUntilDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
+
+  // Sponsorship related properties
+  sponsorships: SponsorshipWithGifts[] = [];
+  currentSponsorship: SponsorshipWithGifts | null = null;
+  showAddDonorForm = false;
+  showAddGiftForm = false;
+  availableDonors: Donor[] = [];
+  
+  // Form data
+  newSponsorshipForm = {
+    donorId: 0,
+    sponsorshipType: SponsorshipType.MONTHLY,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: ''
+  };
+
+  newGiftForm = {
+    giftName: '',
+    giftDate: new Date().toISOString().split('T')[0],
+    description: '',
+    giftValue: 0
+  };
+
+  newDonorForm = {
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: '',
+    company: ''
+  };
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private orphanService: OrphanService,
+    private pdfService: PdfService,
+    private sponsorshipService: SponsorshipService,
+    private donationService: DonationService,
+    private donorService: DonorService
+  ) {}
+
+  ngOnInit(): void {
+    const orphanId = this.route.snapshot.paramMap.get('id');
+    if (orphanId) {
+      this.loadOrphan(+orphanId);
+    }
+  }
+
+  loadOrphan(id: number): void {
+    this.isLoading = true;
+    this.error = null;
+    
+    this.orphanService.getOrphanById(id).subscribe({
+      next: (orphan) => {
+        this.orphan = orphan;
+        this.isLoading = false;
+        // Load sponsorships after orphan is loaded
+        this.loadSponsorships(id);
+        this.loadAvailableDonors();
+      },
+      error: (error) => {
+        console.error('Error loading orphan:', error);
+        this.error = 'Failed to load orphan details';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  loadSponsorships(orphanId: number): void {
+    this.sponsorshipService.getSponsorshipsByOrphanId(orphanId).subscribe({
+      next: (sponsorships) => {
+        this.sponsorships = sponsorships;
+        this.currentSponsorship = sponsorships.find(s => !s.endDate) || null;
+      },
+      error: (error) => {
+        console.error('Error loading sponsorships:', error);
+      }
+    });
+  }
+
+  loadAvailableDonors(): void {
+    this.donorService.getDonors().subscribe({
+      next: (donors) => {
+        this.availableDonors = donors;
+      },
+      error: (error) => {
+        console.error('Error loading donors:', error);
+      }
+    });
+  }
+
+  // Form methods
+  openAddDonorForm(): void {
+    this.showAddDonorForm = true;
+    this.resetNewDonorForm();
+  }
+
+  closeAddDonorForm(): void {
+    this.showAddDonorForm = false;
+    this.resetNewDonorForm();
+  }
+
+  openAddGiftForm(): void {
+    this.showAddGiftForm = true;
+    this.resetNewGiftForm();
+  }
+
+  closeAddGiftForm(): void {
+    this.showAddGiftForm = false;
+    this.resetNewGiftForm();
+  }
+
+  resetNewDonorForm(): void {
+    this.newDonorForm = {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: '',
+      company: ''
+    };
+    this.newSponsorshipForm = {
+      donorId: 0,
+      sponsorshipType: SponsorshipType.MONTHLY,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: ''
+    };
+  }
+
+  resetNewGiftForm(): void {
+    this.newGiftForm = {
+      giftName: '',
+      giftDate: new Date().toISOString().split('T')[0],
+      description: '',
+      giftValue: 0
+    };
+  }
+
+  submitNewDonor(): void {
+    if (!this.orphan) return;
+
+    // First create the donor
+    const donorData = { ...this.newDonorForm };
+    
+    this.donorService.createDonor(donorData).subscribe({
+      next: (donor) => {
+        // Then create sponsorship
+        const sponsorshipRequest: CreateSponsorshipRequest = {
+          orphanId: this.orphan!.id!,
+          donorId: donor.id!,
+          sponsorshipType: this.newSponsorshipForm.sponsorshipType,
+          startDate: this.newSponsorshipForm.startDate,
+          endDate: this.newSponsorshipForm.endDate || undefined
+        };
+
+        this.sponsorshipService.createSponsorship(sponsorshipRequest).subscribe({
+          next: (sponsorship) => {
+            console.log('Sponsorship created successfully:', sponsorship);
+            this.loadSponsorships(this.orphan!.id!);
+            this.closeAddDonorForm();
+            alert('تم إضافة المتبرع والكفالة بنجاح - Donor and sponsorship added successfully!');
+          },
+          error: (error) => {
+            console.error('Error creating sponsorship:', error);
+            alert('خطأ في إنشاء الكفالة - Error creating sponsorship');
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error creating donor:', error);
+        alert('خطأ في إضافة المتبرع - Error creating donor');
+      }
+    });
+  }
+
+  submitNewGift(): void {
+    if (!this.currentSponsorship || !this.orphan) return;
+
+    const giftRequest: CreateGiftRequest = {
+      sponsorshipId: this.currentSponsorship.id!,
+      giftName: this.newGiftForm.giftName,
+      giftDate: this.newGiftForm.giftDate,
+      description: this.newGiftForm.description,
+      giftValue: this.newGiftForm.giftValue
+    };
+
+    this.sponsorshipService.createGift(giftRequest).subscribe({
+      next: (gift) => {
+        console.log('Gift created successfully:', gift);
+        this.loadSponsorships(this.orphan!.id!);
+        this.closeAddGiftForm();
+        alert('تم إضافة الهدية بنجاح - Gift added successfully!');
+      },
+      error: (error) => {
+        console.error('Error creating gift:', error);
+        if (error.error && error.error.includes('insufficient balance')) {
+          alert('لا يمكن إضافة الهدية، الرصيد غير كاف - Cannot add gift, insufficient balance');
+        } else {
+          alert('خطأ في إضافة الهدية - Error adding gift');
+        }
+      }
+    });
+  }
+
+  // Helper methods
+  getSponsorshipTypeLabel(type: string): string {
+    return type === 'MONTHLY' ? 'شهري' : 'سنوي';
+  }
+
+  getOrphanPhotoUrl(photo?: string): string {
+    if (!photo) {
+      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNTAgMTYwQzUwIDEzNS4xNDcgNzAuMTQ3IDExNSA5NSAxMTVIMTA1QzEyOS44NTMgMTE1IDE1MCAxMzUuMTQ3IDE1MCAxNjBWMjAwSDUwVjE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+    }
+    
+    if (photo.startsWith('/uploads') || photo.startsWith('uploads')) {
+      return `${environment.apiUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
+    } else if (photo.startsWith('http')) {
+      return photo;
+    } else {
+      return photo;
+    }
+  }
+
+  calculateAge(dob: string): number {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  }
+
+  downloadCard(): void {
+    if (!this.orphan) return;
+    
+    this.orphanService.downloadIdCard(this.orphan.id!).subscribe({
+      next: (blob) => {
+        if (typeof window !== 'undefined') {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.orphan!.firstName}-${this.orphan!.lastName}-id-card.pdf`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        }
+      },
+      error: (error) => {
+        console.error('Error downloading card:', error);
+        alert('Error downloading ID card');
+      }
+    });
+  }
+
+  getSponsorshipStatus(sponsorship: SponsorshipWithGifts): string {
+    if (!sponsorship.endDate) {
+      return 'Active';
+    }
+    
+    const endDate = new Date(sponsorship.endDate);
+    const today = new Date();
+    
+    return endDate < today ? 'Expired' : 'Active';
+  }
+
+  formatCurrency(amount: number): string {
+    if (amount === undefined || amount === null) return '-';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  getSponsorshipTypeArabic(type: string): string {
+    return type === 'MONTHLY' ? 'شهري - Monthly' : 'سنوي - Yearly';
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-EG');
+  }
+
+  getRecentGifts(gifts: any[]): any[] {
+    if (!gifts || gifts.length === 0) return [];
+    return gifts.slice(0, 3); // Show only recent 3 gifts
+  }
+
+  goBack(): void {
+    this.router.navigate(['/orphan-management']);
+  }
+
+  handleImageError(event: any): void {
+    const imgElement = event.target as HTMLImageElement;
+    if (imgElement) {
+      imgElement.src = this.getOrphanPhotoUrl();
+    }
+  }
+
+  loadOrphan(id: number): void {
+    this.isLoading = true;
+    this.error = null;
+    
+    this.orphanService.getOrphanById(id).subscribe({
+      next: (orphan) => {
+        this.orphan = orphan;
+        this.isLoading = false;
+        // Load sponsorships after orphan is loaded
+        this.loadSponsorships(id);
+        this.loadAvailableDonors();
+      },
+      error: (error) => {
+        console.error('Error loading orphan:', error);
+        this.error = 'Failed to load orphan details';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  loadSponsorships(orphanId: number): void {
+    this.sponsorshipService.getSponsorshipsByOrphanId(orphanId).subscribe({
+      next: (sponsorships) => {
+        this.sponsorships = sponsorships;
+        this.currentSponsorship = sponsorships.find(s => !s.endDate) || null;
+      },
+      error: (error) => {
+        console.error('Error loading sponsorships:', error);
+      }
+    });
+  }
+
+  loadAvailableDonors(): void {
+    this.donorService.getDonors().subscribe({
+      next: (donors) => {
+        this.availableDonors = donors;
+      },
+      error: (error) => {
+        console.error('Error loading donors:', error);
+      }
+    });
+  }
+
+  // Form methods
+  openAddDonorForm(): void {
+    this.showAddDonorForm = true;
+    this.resetNewDonorForm();
+  }
+
+  closeAddDonorForm(): void {
+    this.showAddDonorForm = false;
+    this.resetNewDonorForm();
+  }
+
+  openAddGiftForm(): void {
+    this.showAddGiftForm = true;
+    this.resetNewGiftForm();
+  }
+
+  closeAddGiftForm(): void {
+    this.showAddGiftForm = false;
+    this.resetNewGiftForm();
+  }
+
+  resetNewDonorForm(): void {
+    this.newDonorForm = {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: '',
+      company: ''
+    };
+    this.newSponsorshipForm = {
+      donorId: 0,
+      sponsorshipType: SponsorshipType.MONTHLY,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: ''
+    };
+  }
+
+  resetNewGiftForm(): void {
+    this.newGiftForm = {
+      giftName: '',
+      giftDate: new Date().toISOString().split('T')[0],
+      description: '',
+      giftValue: 0
+    };
+  }
+
+  submitNewDonor(): void {
+    if (!this.orphan) return;
+
+    // First create the donor
+    const donorData = { ...this.newDonorForm };
+    
+    this.donorService.createDonor(donorData).subscribe({
+      next: (donor) => {
+        // Then create sponsorship
+        const sponsorshipRequest: CreateSponsorshipRequest = {
+          orphanId: this.orphan!.id!,
+          donorId: donor.id!,
+          sponsorshipType: this.newSponsorshipForm.sponsorshipType,
+          startDate: this.newSponsorshipForm.startDate,
+          endDate: this.newSponsorshipForm.endDate || undefined
+        };
+
+        this.sponsorshipService.createSponsorship(sponsorshipRequest).subscribe({
+          next: (sponsorship) => {
+            console.log('Sponsorship created successfully:', sponsorship);
+            this.loadSponsorships(this.orphan!.id!);
+            this.closeAddDonorForm();
+            alert('تم إضافة المتبرع والكفالة بنجاح - Donor and sponsorship added successfully!');
+          },
+          error: (error) => {
+            console.error('Error creating sponsorship:', error);
+            alert('خطأ في إنشاء الكفالة - Error creating sponsorship');
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error creating donor:', error);
+        alert('خطأ في إضافة المتبرع - Error creating donor');
+      }
+    });
+  }
+
+  submitNewGift(): void {
+    if (!this.currentSponsorship || !this.orphan) return;
+
+    const giftRequest: CreateGiftRequest = {
+      sponsorshipId: this.currentSponsorship.id!,
+      giftName: this.newGiftForm.giftName,
+      giftDate: this.newGiftForm.giftDate,
+      description: this.newGiftForm.description,
+      giftValue: this.newGiftForm.giftValue
+    };
+
+    this.sponsorshipService.createGift(giftRequest).subscribe({
+      next: (gift) => {
+        console.log('Gift created successfully:', gift);
+        this.loadSponsorships(this.orphan!.id!);
+        this.closeAddGiftForm();
+        alert('تم إضافة الهدية بنجاح - Gift added successfully!');
+      },
+      error: (error) => {
+        console.error('Error creating gift:', error);
+        if (error.error && error.error.includes('insufficient balance')) {
+          alert('لا يمكن إضافة الهدية، الرصيد غير كاف - Cannot add gift, insufficient balance');
+        } else {
+          alert('خطأ في إضافة الهدية - Error adding gift');
+        }
+      }
+    });
+  }
+
+  // Helper methods
+  getSponsorshipTypeLabel(type: string): string {
+    return type === 'MONTHLY' ? 'شهري' : 'سنوي';
+  }
+
+  getOrphanPhotoUrl(photo?: string): string {
+    if (!photo) {
+      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNTAgMTYwQzUwIDEzNS4xNDcgNzAuMTQ3IDExNSA5NSAxMTVIMTA1QzEyOS44NTMgMTE1IDE1MCAxMzUuMTQ3IDE1MCAxNjBWMjAwSDUwVjE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+    }
+    
+    if (photo.startsWith('/uploads') || photo.startsWith('uploads')) {
+      return `${environment.apiUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
+    } else if (photo.startsWith('http')) {
+      return photo;
+    } else {
+      return photo;
+    }
+  }
+
+  calculateAge(dob: string): number {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  }
+
+  downloadCard(): void {
+    if (!this.orphan) return;
+    
+    this.orphanService.downloadIdCard(this.orphan.id!).subscribe({
+      next: (blob) => {
+        if (typeof window !== 'undefined') {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.orphan!.firstName}-${this.orphan!.lastName}-id-card.pdf`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        }
+      },
+      error: (error) => {
+        console.error('Error downloading card:', error);
+        alert('Error downloading ID card');
+      }
+    });
+  }
+
+  getSponsorshipStatus(sponsorship: SponsorshipWithGifts): string {
+    if (!sponsorship.endDate) {
+      return 'Active';
+    }
+    
+    const endDate = new Date(sponsorship.endDate);
+    const today = new Date();
+    
+    return endDate < today ? 'Expired' : 'Active';
+  }
+
+  formatCurrency(amount: number): string {
+    if (amount === undefined || amount === null) return '-';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  getSponsorshipTypeArabic(type: string): string {
+    return type === 'MONTHLY' ? 'شهري - Monthly' : 'سنوي - Yearly';
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-EG');
+  }
+
+  getRecentGifts(gifts: any[]): any[] {
+    if (!gifts || gifts.length === 0) return [];
+    return gifts.slice(0, 3); // Show only recent 3 gifts
+  }
+}
+
+  loadOrphan(id: number): void {
+    this.isLoading = true;
+    this.error = null;
+    
+    this.orphanService.getOrphanById(id).subscribe({
+      next: (orphan) => {
+        this.orphan = orphan;
+        this.isLoading = false;
+        // Load sponsorships after orphan is loaded
+        this.loadSponsorships(id);
+        this.loadAvailableDonors();
+      },
+      error: (error) => {
+        console.error('Error loading orphan:', error);
+        this.error = 'Failed to load orphan details';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  loadSponsorships(orphanId: number): void {
+    this.sponsorshipService.getSponsorshipsByOrphanId(orphanId).subscribe({
+      next: (sponsorships) => {
+        this.sponsorships = sponsorships;
+        this.currentSponsorship = sponsorships.find(s => !s.endDate) || null;
+      },
+      error: (error) => {
+        console.error('Error loading sponsorships:', error);
+      }
+    });
+  }
+
+  loadAvailableDonors(): void {
+    this.donorService.getDonors().subscribe({
+      next: (donors) => {
+        this.availableDonors = donors;
+      },
+      error: (error) => {
+        console.error('Error loading donors:', error);
+      }
+    });
+  }
+
+  // Sponsorship Management Methods
+  showAddDonorFormToggle(): void {
+    this.showAddDonorForm = !this.showAddDonorForm;
+    if (this.showAddDonorForm) {
+      this.resetNewDonorForm();
+    }
+  }
+
+  showAddGiftFormToggle(): void {
+    this.showAddGiftForm = !this.showAddGiftForm;
+    if (this.showAddGiftForm) {
+      this.resetNewGiftForm();
+    }
+  }
+
+  createSponsorship(): void {
+    if (!this.orphan || this.newSponsorshipForm.donorId === 0) return;
+
+    const request: CreateSponsorshipRequest = {
+      orphanId: this.orphan.id!,
+      donorId: this.newSponsorshipForm.donorId,
+      sponsorshipType: this.newSponsorshipForm.sponsorshipType,
+      startDate: this.newSponsorshipForm.startDate,
+      endDate: this.newSponsorshipForm.endDate || undefined
+    };
+
+    this.sponsorshipService.createSponsorship(request).subscribe({
+      next: (sponsorship) => {
+        this.loadSponsorships(this.orphan!.id!);
+        this.showAddDonorForm = false;
+        this.resetNewSponsorshipForm();
+      },
+      error: (error) => {
+        console.error('Error creating sponsorship:', error);
+        alert('خطأ في إنشاء الكفالة');
+      }
+    });
+  }
+
+  createDonor(): void {
+    this.donorService.createDonor(this.newDonorForm).subscribe({
+      next: (donor) => {
+        this.availableDonors.push(donor);
+        this.newSponsorshipForm.donorId = donor.id!;
+        this.createSponsorship();
+      },
+      error: (error) => {
+        console.error('Error creating donor:', error);
+        alert('خطأ في إنشاء المتبرع');
+      }
+    });
+  }
+
+  addGift(): void {
+    if (!this.currentSponsorship) return;
+
+    // Check donor balance first
+    this.donationService.checkSufficientBalance(this.currentSponsorship.donorId, this.newGiftForm.giftValue).subscribe({
+      next: (sufficient) => {
+        if (!sufficient) {
+          alert('لا يمكن إضافة الهدية، الرصيد غير كاف');
+          return;
+        }
+
+        const request: CreateGiftRequest = {
+          sponsorshipId: this.currentSponsorship!.id!,
+          giftName: this.newGiftForm.giftName,
+          giftDate: this.newGiftForm.giftDate,
+          description: this.newGiftForm.description,
+          giftValue: this.newGiftForm.giftValue
+        };
+
+        this.sponsorshipService.createGift(request).subscribe({
+          next: (gift) => {
+            this.loadSponsorships(this.orphan!.id!);
+            this.showAddGiftForm = false;
+            this.resetNewGiftForm();
+          },
+          error: (error) => {
+            console.error('Error creating gift:', error);
+            if (error.error && typeof error.error === 'string' && error.error.includes('الرصيد غير كاف')) {
+              alert('لا يمكن إضافة الهدية، الرصيد غير كاف');
+            } else {
+              alert('خطأ في إضافة الهدية');
+            }
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error checking balance:', error);
+        alert('خطأ في التحقق من الرصيد');
+      }
+    });
+  }
+
+  // Form reset methods
+  resetNewSponsorshipForm(): void {
+    this.newSponsorshipForm = {
+      donorId: 0,
+      sponsorshipType: SponsorshipType.MONTHLY,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: ''
+    };
+  }
+
+
+
+  getSponsorshipTypeLabel(type: string): string {
+    return type === 'MONTHLY' ? 'شهري' : 'سنوي';
+  }
+
+  getOrphanPhotoUrl(photo?: string): string {
+    if (!photo) {
+      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNTAgMTYwQzUwIDEzNS4xNDcgNzAuMTQ3IDExNSA5NSAxMTVIMTA1QzEyOS44NTMgMTE1IDE1MCAxMzUuMTQ3IDE1MCAxNjBWMjAwSDUwVjE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+    }
+    
+    if (photo.startsWith('/uploads') || photo.startsWith('uploads')) {
+      return `${environment.apiUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
+    } else if (photo.startsWith('http')) {
+      return photo;
+    } else {
+      return photo;
+    }
+  }
+
+  calculateAge(dob: string): number {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  }
+
+
+
+  downloadCard(): void {
+    if (!this.orphan) return;
+    
+    this.orphanService.downloadIdCard(this.orphan.id!).subscribe({
+      next: (blob) => {
+        if (typeof window !== 'undefined') {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.orphan!.firstName}-${this.orphan!.lastName}-id-card.pdf`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        }
+      },
+      error: (error) => {
+        console.error('Error downloading ID card:', error);
+        alert('Error downloading ID card. Please try again.');
+      }
+    });
+  }
+
+  async generateCardTemplate1(): Promise<void> {
+    if (!this.orphan) return;
+    
+    try {
+      await this.pdfService.generateCard1(this.orphan);
+    } catch (error) {
+      console.error('Error generating card template 1:', error);
+      alert('Error generating card template 1. Please try again.');
+    }
+  }
+
+  async generateCardTemplate2(): Promise<void> {
+    if (!this.orphan) return;
+    
+    try {
+      await this.pdfService.generateCard2(this.orphan);
+    } catch (error) {
+      console.error('Error generating card template 2:', error);
+      alert('Error generating card template 2. Please try again.');
+    }
+  }
+
+  printCard(): void {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  }
+
+  handleImageError(event: Event): void {
+    const imgElement = event.target as HTMLImageElement;
+    if (imgElement) {
+      imgElement.src = this.getOrphanPhotoUrl();
+    }
+  }
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
+
+  // Sponsorship and Gift Management Methods
+  openAddDonorForm(): void {
+    this.showAddDonorForm = true;
+    this.resetNewDonorForm();
+  }
+
+  closeAddDonorForm(): void {
+    this.showAddDonorForm = false;
+    this.resetNewDonorForm();
+  }
+
+  openSelectDonorForm(): void {
+    // Implementation for selecting existing donor
+    // This could open a different modal with donor selection
+    console.log('Open select donor form');
+  }
+
+  openAddGiftForm(): void {
+    this.showAddGiftForm = true;
+    this.resetNewGiftForm();
+  }
+
+  closeAddGiftForm(): void {
+    this.showAddGiftForm = false;
+    this.resetNewGiftForm();
+  }
+
+  resetNewDonorForm(): void {
+    this.newDonorForm = {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: '',
+      company: ''
+    };
+    this.newSponsorshipForm = {
+      donorId: 0,
+      sponsorshipType: SponsorshipType.MONTHLY,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: ''
+    };
+  }
+
+  resetNewGiftForm(): void {
+    this.newGiftForm = {
+      giftName: '',
+      giftDate: new Date().toISOString().split('T')[0],
+      description: '',
+      giftValue: 0
+    };
+  }
+
+  submitNewDonor(): void {
+    if (!this.orphan) return;
+
+    // First create the donor
+    const donorData = { ...this.newDonorForm };
+    
+    this.donorService.createDonor(donorData).subscribe({
+      next: (donor) => {
+        // Then create sponsorship
+        const sponsorshipRequest: CreateSponsorshipRequest = {
+          orphanId: this.orphan!.id!,
+          donorId: donor.id!,
+          sponsorshipType: this.newSponsorshipForm.sponsorshipType,
+          startDate: this.newSponsorshipForm.startDate,
+          endDate: this.newSponsorshipForm.endDate || undefined
+        };
+
+        this.sponsorshipService.createSponsorship(sponsorshipRequest).subscribe({
+          next: (sponsorship) => {
+            console.log('Sponsorship created successfully:', sponsorship);
+            this.loadSponsorships(this.orphan!.id!);
+            this.closeAddDonorForm();
+            alert('تم إضافة المتبرع والكفالة بنجاح - Donor and sponsorship added successfully!');
+          },
+          error: (error) => {
+            console.error('Error creating sponsorship:', error);
+            alert('خطأ في إنشاء الكفالة - Error creating sponsorship');
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error creating donor:', error);
+        alert('خطأ في إضافة المتبرع - Error creating donor');
+      }
+    });
+  }
+
+  submitNewGift(): void {
+    if (!this.currentSponsorship || !this.orphan) return;
+
+    const giftRequest: CreateGiftRequest = {
+      sponsorshipId: this.currentSponsorship.id!,
+      giftName: this.newGiftForm.giftName,
+      giftDate: this.newGiftForm.giftDate,
+      description: this.newGiftForm.description,
+      giftValue: this.newGiftForm.giftValue
+    };
+
+    this.sponsorshipService.createGift(giftRequest).subscribe({
+      next: (gift) => {
+        console.log('Gift created successfully:', gift);
+        this.loadSponsorships(this.orphan!.id!);
+        this.closeAddGiftForm();
+        alert('تم إضافة الهدية بنجاح - Gift added successfully!');
+      },
+      error: (error) => {
+        console.error('Error creating gift:', error);
+        if (error.error && error.error.includes('insufficient balance')) {
+          alert('لا يمكن إضافة الهدية، الرصيد غير كاف - Cannot add gift, insufficient balance');
+        } else {
+          alert('خطأ في إضافة الهدية - Error adding gift');
+        }
+      }
+    });
+  }
+
+  // Helper methods
+
+  getSponsorshipStatus(sponsorship: Sponsorship): string {
+    if (!sponsorship.endDate) {
+      return 'Active';
+    }
+    
+    const endDate = new Date(sponsorship.endDate);
+    const today = new Date();
+    
+    return endDate < today ? 'Expired' : 'Active';
+  }
+
+  formatCurrency(amount: number): string {
+    if (amount === undefined || amount === null) return '-';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  getSponsorshipTypeArabic(type: string): string {
+    return type === 'MONTHLY' ? 'شهري - Monthly' : 'سنوي - Yearly';
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-EG');
+  }
+
+  getRecentGifts(gifts: any[]): any[] {
+    if (!gifts || gifts.length === 0) return [];
+    return gifts.slice(0, 3); // Show only recent 3 gifts
+  }
+}

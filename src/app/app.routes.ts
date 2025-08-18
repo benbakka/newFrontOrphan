@@ -27,6 +27,16 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'charity-projects',
+    loadComponent: () => import('./features/charity-projects/charity-projects.component').then(m => m.CharityProjectsComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'gifts',
+    loadComponent: () => import('./features/gifts/gifts.component').then(m => m.GiftsComponent),
+    canActivate: [AuthGuard]
+  },
+  {
     path: '**',
     redirectTo: '/dashboard'
   }

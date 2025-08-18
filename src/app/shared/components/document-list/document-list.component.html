@@ -1,0 +1,145 @@
+<div class="document-list-container">
+  <!-- Loading State -->
+  <div class="text-center py-4" *ngIf="isLoading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading documents...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading documents...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="alert alert-danger" *ngIf="error && !isLoading">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ error }}
+    <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadDocuments()">
+      <i class="fas fa-redo me-1"></i>
+      Retry
+    </button>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state text-center py-4" *ngIf="!isLoading && !error && documents.length === 0">
+    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+    <h6 class="text-muted">No documents uploaded yet</h6>
+    <p class="text-muted small">Upload birth certificates, school certificates, or other important documents.</p>
+  </div>
+
+  <!-- Documents List -->
+  <div class="documents-grid" *ngIf="!isLoading && !error && documents.length > 0">
+    <div class="document-card" *ngFor="let document of documents">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <!-- Document Header -->
+          <div class="d-flex align-items-start justify-content-between mb-3">
+            <div class="document-info flex-grow-1">
+              <div class="d-flex align-items-center mb-2">
+                <i [class]="getFileIcon(document.mimeType)" 
+                   [class]="getFileTypeColor(document.mimeType)" 
+                   class="fa-lg me-2"></i>
+                <h6 class="mb-0 document-name">{{ document.documentName }}</h6>
+              </div>
+              <span class="badge bg-light text-dark document-type">
+                {{ documentTypeLabels[document.documentType] }}
+              </span>
+            </div>
+            
+            <!-- Actions Dropdown -->
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                      type="button" 
+                      [id]="'dropdownMenuButton' + document.id"
+                      data-bs-toggle="dropdown">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <ul class="dropdown-menu" [attr.aria-labelledby]="'dropdownMenuButton' + document.id">
+                <li *ngIf="canPreview(document.mimeType)">
+                  <a class="dropdown-item" href="#" (click)="previewDocument(document); $event.preventDefault()">
+                    <i class="fas fa-eye me-2"></i>Preview
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="#" (click)="downloadDocument(document); $event.preventDefault()">
+                    <i class="fas fa-download me-2"></i>Download
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item text-danger" href="#" (click)="deleteDocument(document); $event.preventDefault()">
+                    <i class="fas fa-trash me-2"></i>Delete
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Document Details -->
+          <div class="document-details">
+            <div class="detail-row">
+              <small class="text-muted">
+                <i class="fas fa-file me-1"></i>
+                {{ document.originalFilename }}
+              </small>
+            </div>
+            <div class="detail-row">
+              <small class="text-muted">
+                <i class="fas fa-weight me-1"></i>
+                {{ formatFileSize(document.fileSize) }}
+              </small>
+            </div>
+            <div class="detail-row">
+              <small class="text-muted">
+                <i class="fas fa-calendar me-1"></i>
+                {{ formatDate(document.uploadDate) }}
+              </small>
+            </div>
+            <div class="detail-row" *ngIf="document.description">
+              <small class="text-muted">
+                <i class="fas fa-comment me-1"></i>
+                {{ document.description }}
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions Footer -->
+        <div class="card-footer bg-transparent border-0 pt-0">
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary flex-fill" 
+                    *ngIf="canPreview(document.mimeType)"
+                    (click)="previewDocument(document)">
+              <i class="fas fa-eye me-1"></i>
+              Preview
+            </button>
+            <button class="btn btn-sm btn-outline-success flex-fill" 
+                    (click)="downloadDocument(document)">
+              <i class="fas fa-download me-1"></i>
+              Download
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents Summary -->
+  <div class="documents-summary mt-3" *ngIf="!isLoading && !error && documents.length > 0">
+    <div class="card bg-light">
+      <div class="card-body py-2">
+        <div class="row text-center">
+          <div class="col-4">
+            <small class="text-muted d-block">Total Documents</small>
+            <strong>{{ documents.length }}</strong>
+          </div>
+          <div class="col-4">
+            <small class="text-muted d-block">Images</small>
+            <strong>{{ imageCount }}</strong> Images
+          </div>
+          <div class="col-4">
+            <small class="text-muted d-block">PDFs</small>
+            <strong>{{ pdfCount }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

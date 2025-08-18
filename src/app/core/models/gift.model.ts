@@ -2,25 +2,44 @@ export interface Gift {
   id?: number;
   donorId: number;
   donorName?: string;
-  orphanId: number;
+  orphanId?: number;
   orphanName?: string;
+  projectId?: number;
+  projectName?: string;
   amount: number;
-  date: string;
+  giftName?: string;
+  giftDate: string; // Changed from 'date' to match backend
   description?: string;
-  giftType: GiftType;
-  kafalaFrequency?: KafalaFrequency;
-  isKafala?: boolean;
+  giftType: number | string; // Support both entity ID and legacy enum
+  giftTypeName?: string;
+  sponsorshipId?: number; // Added sponsorship relationship
+  recipientName?: string; // Added for expenses display
 }
 
 export interface CreateGiftRequest {
   donorId: number;
-  orphanId: number;
+  orphanId?: number;
+  projectId?: number;
+  sponsorshipId?: number; // Added sponsorship relationship
   amount: number;
   date?: string;
+  giftName?: string;
   description?: string;
-  giftType: GiftType;
-  kafalaFrequency?: KafalaFrequency;
-  isKafala?: boolean;
+  giftType: number; // Gift type entity ID
+}
+
+// Updated gift creation request for new system
+export interface CreateGiftRequestV2 {
+  donorId: number;
+  giftTypeId: number;
+  amount: number;
+  giftName: string;
+  date: string;
+  description?: string;
+  beneficiaryType: 'orphan' | 'project' | 'charity'; // Who benefits from the gift
+  orphanId?: number; // Optional - only if beneficiaryType is 'orphan'
+  projectId?: number; // Optional - only if beneficiaryType is 'project'
+  sponsorshipId?: number; // Optional - only if linked to a sponsorship
 }
 
 export enum GiftType {
@@ -33,6 +52,12 @@ export enum GiftType {
 export enum KafalaFrequency {
   MONTHLY = 'MONTHLY',
   YEARLY = 'YEARLY'
+}
+
+export enum BeneficiaryType {
+  ORPHAN = 'orphan',
+  PROJECT = 'project',
+  CHARITY = 'charity'
 }
 
 export interface DonorDetailDTO {

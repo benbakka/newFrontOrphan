@@ -1,0 +1,333 @@
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1">
+            <i class="fas fa-gift text-primary me-2"></i>
+            Gift Types Fund Tracking
+          </h2>
+          <p class="text-muted mb-0">Track donations and expenses for each gift type</p>
+        </div>
+        <button class="btn btn-outline-primary" (click)="refresh()" [disabled]="isLoading">
+          <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Statistics -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">Total Funds</h6>
+              <h4 class="mb-0">{{ formatCurrency(totalFunds) }}</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-wallet fa-2x opacity-75"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">Total Donations</h6>
+              <h4 class="mb-0">{{ formatCurrency(totalDonations) }}</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-arrow-up fa-2x opacity-75"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">Total Expenses</h6>
+              <h4 class="mb-0">{{ formatCurrency(totalExpenses) }}</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-arrow-down fa-2x opacity-75"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">Active Gift Types</h6>
+              <h4 class="mb-0">{{ activeGiftTypes }}</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-list fa-2x opacity-75"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="row" *ngIf="error">
+    <div class="col-12">
+      <div class="alert alert-danger" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ error }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="row" *ngIf="isLoading">
+    <div class="col-12 text-center">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading gift types...</p>
+    </div>
+  </div>
+
+  <!-- Gift Types Grid -->
+  <div class="row" *ngIf="!isLoading && !error">
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-4" *ngFor="let giftType of giftTypes">
+      <div class="card h-100 gift-type-card {{ getCardClass(giftType) }}" 
+           (click)="openGiftTypeDetails(giftType)" 
+           style="cursor: pointer;">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h6 class="card-title mb-0" [title]="giftType.name">
+              {{ giftType.name.length > 25 ? (giftType.name | slice:0:25) + '...' : giftType.name }}
+            </h6>
+            <i class="fas fa-chevron-right text-muted"></i>
+          </div>
+          
+          <div class="mb-3">
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="text-success">
+                  <i class="fas fa-plus-circle"></i>
+                  <div class="small">Donations</div>
+                  <div class="fw-bold">{{ formatCurrency(giftType.totalDonations) }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="text-warning">
+                  <i class="fas fa-minus-circle"></i>
+                  <div class="small">Expenses</div>
+                  <div class="fw-bold">{{ formatCurrency(giftType.totalExpenses) }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div [class]="getBalanceClass(giftType.balance)">
+                  <i [class]="getBalanceIcon(giftType.balance)"></i>
+                  <div class="small">Balance</div>
+                  <div class="fw-bold">{{ formatCurrency(giftType.balance) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress mb-2" style="height: 6px;">
+            <div class="progress-bar bg-success" 
+                 [style.width.%]="getProgressPercentage(giftType.totalDonations || 0, (giftType.totalDonations || 0) + (giftType.totalExpenses || 0))"
+                 [title]="'Donations: ' + formatCurrency(giftType.totalDonations)"></div>
+            <div class="progress-bar bg-warning" 
+                 [style.width.%]="getProgressPercentage(giftType.totalExpenses || 0, (giftType.totalDonations || 0) + (giftType.totalExpenses || 0))"
+                 [title]="'Expenses: ' + formatCurrency(giftType.totalExpenses)"></div>
+          </div>
+
+          <div class="text-muted small" *ngIf="giftType.description">
+            {{ giftType.description.length > 50 ? (giftType.description | slice:0:50) + '...' : giftType.description }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="row" *ngIf="!isLoading && !error && giftTypes.length === 0">
+    <div class="col-12 text-center py-5">
+      <i class="fas fa-gift fa-3x text-muted mb-3"></i>
+      <h4 class="text-muted">No Gift Types Found</h4>
+      <p class="text-muted">No active gift types are available at the moment.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Detail View Modal -->
+<div class="modal fade show" 
+     *ngIf="showDetailView" 
+     style="display: block; background-color: rgba(0,0,0,0.5);"
+     tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-gift text-primary me-2"></i>
+          {{ selectedGiftType?.name }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDetailView()"></button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Gift Type Summary -->
+        <div class="row mb-4" *ngIf="selectedGiftType">
+          <div class="col-md-4">
+            <div class="card bg-light">
+              <div class="card-body text-center">
+                <h6 class="text-success">Total Donations</h6>
+                <h4 class="text-success">{{ formatCurrency(selectedGiftType.totalDonations) }}</h4>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card bg-light">
+              <div class="card-body text-center">
+                <h6 class="text-warning">Total Expenses</h6>
+                <h4 class="text-warning">{{ formatCurrency(selectedGiftType.totalExpenses) }}</h4>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card bg-light">
+              <div class="card-body text-center">
+                <h6 [class]="getBalanceClass(selectedGiftType.balance)">Current Balance</h6>
+                <h4 [class]="getBalanceClass(selectedGiftType.balance)">
+                  {{ formatCurrency(selectedGiftType.balance) }}
+                </h4>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading Details -->
+        <div class="text-center py-4" *ngIf="isLoadingDetails">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading details...</span>
+          </div>
+          <p class="mt-2 text-muted">Loading transaction details...</p>
+        </div>
+
+        <!-- Tabs for Donations and Expenses -->
+        <div *ngIf="!isLoadingDetails">
+          <ul class="nav nav-tabs" id="detailTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" 
+                      [class.active]="activeTab === 'donations'"
+                      (click)="switchTab('donations')"
+                      type="button" role="tab">
+                <i class="fas fa-plus-circle text-success me-2"></i>
+                Donations ({{ donations.length }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" 
+                      [class.active]="activeTab === 'expenses'"
+                      (click)="switchTab('expenses')"
+                      type="button" role="tab">
+                <i class="fas fa-minus-circle text-warning me-2"></i>
+                Expenses ({{ expenses.length }})
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content" id="detailTabsContent">
+            <!-- Donations Tab -->
+            <div class="tab-pane" 
+                 [class.fade]="false"
+                 [class.show]="activeTab === 'donations'"
+                 [class.active]="activeTab === 'donations'"
+                 *ngIf="activeTab === 'donations'"
+                 role="tabpanel">
+              <div class="table-responsive mt-3">
+                <table class="table table-hover" *ngIf="donations.length > 0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Donor</th>
+                      <th>Amount</th>
+                      <th>Payment Method</th>
+                      <th>Reference</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let donation of donations">
+                      <td>{{ formatDate(donation.donationDate) }}</td>
+                      <td>{{ donation.donorName || 'Unknown' }}</td>
+                      <td class="text-success fw-bold">{{ formatCurrency(donation.amount) }}</td>
+                      <td>{{ donation.paymentMethod || 'N/A' }}</td>
+                      <td>{{ donation.referenceNumber || 'N/A' }}</td>
+                      <td>{{ donation.description || 'N/A' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="text-center py-4" *ngIf="donations.length === 0">
+                  <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                  <p class="text-muted">No donations found for this gift type</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expenses Tab -->
+            <div class="tab-pane" 
+                 [class.fade]="false"
+                 [class.show]="activeTab === 'expenses'"
+                 [class.active]="activeTab === 'expenses'"
+                 *ngIf="activeTab === 'expenses'"
+                 role="tabpanel">
+              <div class="table-responsive mt-3">
+                <table class="table table-hover" *ngIf="expenses.length > 0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Gift Name</th>
+                      <th>Amount</th>
+                      <th>Recipient</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let expense of expenses">
+                      <td>{{ formatDate(expense.giftDate) }}</td>
+                      <td>{{ expense.giftName || 'N/A' }}</td>
+                      <td class="text-warning fw-bold">{{ formatCurrency(expense.amount) }}</td>
+                      <td>{{ expense.recipientName || 'N/A' }}</td>
+                      <td>{{ expense.description || 'N/A' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="text-center py-4" *ngIf="expenses.length === 0">
+                  <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                  <p class="text-muted">No expenses found for this gift type</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDetailView()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

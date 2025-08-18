@@ -13,13 +13,24 @@ import { PdfService } from '../../core/services/pdf.service';
 import { OrphanService } from '../../core/services/orphan.service';
 import { OrphanListDTO } from '../../core/models/orphan-list.dto';
 import { OrphanDetailDTO } from '../../core/models/orphan-detail.dto';
-import { Gift, CreateGiftRequest, GiftType, KafalaFrequency } from '../../core/models/gift.model';
+import { Gift, CreateGiftRequest, CreateGiftRequestV2, GiftType, KafalaFrequency, BeneficiaryType } from '../../core/models/gift.model';
 import { Donor } from '../../core/models/donor.model';
 import { GiftService } from '../../core/services/gift.service';
 import { DonorService } from '../../core/services/donor.service';
+import { GiftTypeService } from '../../core/services/gift-type.service';
+import { CharityProjectService } from '../../core/services/charity-project.service';
+import { SponsorshipService } from '../../core/services/sponsorship.service';
+import { GiftType as GiftTypeModel } from '../../core/models/gift-type.model';
+import { CharityProject } from '../../core/models/charity-project.model';
+import { SponsorshipWithGifts, Sponsorship } from '../../core/models/sponsorship.model';
+import { AdvancedSearchRequest, AdvancedSearchFormData } from '../../core/models/advanced-search.model';
 import { ExcelProcessorService } from '../../core/services/excel-processor.service';
 import { ExcelGeneratorService } from '../../core/services/excel-generator.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { OrphanDocumentService } from '../../core/services/orphan-document.service';
+import { OrphanDocument } from '../../shared/models/orphan-document.model';
+import { DocumentUploadComponent } from '../../shared/components/document-upload/document-upload.component';
+import { DocumentListComponent } from '../../shared/components/document-list/document-list.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -34,7 +45,9 @@ import { environment } from '../../../environments/environment';
     MatFormFieldModule,
     MatNativeDateModule,
     MatDialogModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    DocumentUploadComponent,
+    DocumentListComponent
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'en-US' }
@@ -50,8 +63,10 @@ export class OrphanManagementComponent implements OnInit {
   isEditing = false;
   isCreating = false;
 
-  // Form properties
+  // Form instances
   orphanForm: FormGroup;
+  giftForm: FormGroup;
+  sponsorshipGiftForm: FormGroup;
   selectedPhoto: File | null = null;
   photoPreview: string | null = null;
 
@@ -78,34 +93,72 @@ export class OrphanManagementComponent implements OnInit {
   orphanGifts: Gift[] = []; // For detail view
   modalGifts: Gift[] = []; // For modal view
   donors: Donor[] = [];
-  giftForm: FormGroup;
+  giftTypes: GiftTypeModel[] = [];
+  availableProjects: CharityProject[] = [];
   isGiftModalVisible = false;
   isGiftHistoryModalVisible = false;
   isAddingGift = false;
   isLoadingGifts = false;
   isLoadingModalGifts = false;
+  
+  // New gift form properties
+  beneficiaryType: BeneficiaryType = BeneficiaryType.CHARITY;
+  giftError: string = '';
+  giftSuccess: string = '';
+  isSubmittingGift = false;
+  
+  // Sponsorship-based gift properties
+  isSponsorshipGiftModalVisible = false;
   selectedOrphanForGift: OrphanListDTO | null = null;
   GiftType = GiftType;
   KafalaFrequency = KafalaFrequency;
+  BeneficiaryType = BeneficiaryType; // Expose enum to template
+
+  // Sponsorship modal properties
+  isAddDonorModalVisible = false;
+  isSelectDonorModalVisible = false;
+  isCreatingSponsorshipWithNewDonor = false;
+  isCreatingSponsorshipWithExistingDonor = false;
+  donorForm: FormGroup;
+  sponsorshipForm: FormGroup;
+
+  // Advanced search properties
+  isAdvancedSearchModalVisible = false;
+  advancedSearchForm: FormGroup;
+  isAdvancedSearching = false;
+
+  // Document management properties
+  showDocumentUpload = false;
+  documentRefreshTrigger: any = {};
 
   constructor(
-    private orphanService: OrphanService,
     private fb: FormBuilder,
-    private router: Router,
-    private pdfService: PdfService,
+    private orphanService: OrphanService,
     private giftService: GiftService,
+    private giftTypeService: GiftTypeService,
+    private charityProjectService: CharityProjectService,
     private donorService: DonorService,
+    private sponsorshipService: SponsorshipService,
+    private orphanDocumentService: OrphanDocumentService,
+    private pdfService: PdfService,
     private excelProcessor: ExcelProcessorService,
     private excelGenerator: ExcelGeneratorService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {
+    private snackBar: MatSnackBar,
+    private router: Router
+  ) { 
     this.orphanForm = this.createOrphanForm();
     this.giftForm = this.createGiftForm();
+    this.sponsorshipGiftForm = this.createSponsorshipGiftForm();
+    this.donorForm = this.createDonorForm();
+    this.sponsorshipForm = this.createSponsorshipForm();
+    this.advancedSearchForm = this.createAdvancedSearchForm();
   }
 
   ngOnInit(): void {
     this.loadOrphansList();
+    this.loadGiftTypes();
+    this.loadProjects();
     this.setupDateFormatting();
   }
   
@@ -191,6 +244,96 @@ export class OrphanManagementComponent implements OnInit {
       clearTimeout(this.searchTimeout);
     }
     this.loadOrphansList();
+  }
+
+  // Advanced search methods
+  openAdvancedSearchModal(): void {
+    this.isAdvancedSearchModalVisible = true;
+  }
+
+  closeAdvancedSearchModal(): void {
+    this.isAdvancedSearchModalVisible = false;
+  }
+
+  applyAdvancedSearch(): void {
+    const formData = this.advancedSearchForm.value as AdvancedSearchFormData;
+    const searchRequest = this.convertFormDataToSearchRequest(formData);
+    
+    this.isAdvancedSearching = true;
+    this.orphanService.advancedSearchOrphans(searchRequest).subscribe({
+      next: (orphans) => {
+        this.orphansList = orphans;
+        this.isAdvancedSearching = false;
+        this.closeAdvancedSearchModal();
+        // Disable pagination when using advanced search
+        this.hasMoreData = false;
+        this.allOrphansLoaded = true;
+      },
+      error: (error) => {
+        console.error('Error in advanced search:', error);
+        this.isAdvancedSearching = false;
+      }
+    });
+  }
+
+  resetAdvancedSearch(): void {
+    this.advancedSearchForm.reset();
+    // Reset to default values
+    this.advancedSearchForm.patchValue({
+      name: '',
+      gender: '',
+      ageFrom: null,
+      ageTo: null,
+      country: '',
+      city: '',
+      placeOfBirth: '',
+      isSponsored: '',
+      sponsorshipType: '',
+      sponsorshipStartDate: '',
+      sponsorshipEndDate: '',
+      healthStatus: '',
+      educationLevel: '',
+      projectParticipation: '',
+      registrationDateFrom: '',
+      registrationDateTo: '',
+      guardianName: '',
+      orphanId: ''
+    });
+  }
+
+  private convertFormDataToSearchRequest(formData: AdvancedSearchFormData): AdvancedSearchRequest {
+    const request: AdvancedSearchRequest = {};
+
+    // Only include non-empty values in the request
+    if (formData.name?.trim()) request.name = formData.name.trim();
+    if (formData.gender?.trim()) request.gender = formData.gender.trim();
+    if (formData.ageFrom !== null && formData.ageFrom !== undefined) request.ageFrom = formData.ageFrom;
+    if (formData.ageTo !== null && formData.ageTo !== undefined) request.ageTo = formData.ageTo;
+    if (formData.country?.trim()) request.country = formData.country.trim();
+    if (formData.city?.trim()) request.city = formData.city.trim();
+    if (formData.placeOfBirth?.trim()) request.placeOfBirth = formData.placeOfBirth.trim();
+    
+    // Convert string boolean values
+    if (formData.isSponsored === 'true') request.isSponsored = true;
+    else if (formData.isSponsored === 'false') request.isSponsored = false;
+    
+    if (formData.sponsorshipType?.trim()) request.sponsorshipType = formData.sponsorshipType.trim();
+    if (formData.sponsorshipStartDate?.trim()) request.sponsorshipStartDate = formData.sponsorshipStartDate.trim();
+    if (formData.sponsorshipEndDate?.trim()) request.sponsorshipEndDate = formData.sponsorshipEndDate.trim();
+    
+    if (formData.healthStatus?.trim()) request.healthStatus = formData.healthStatus.trim();
+    if (formData.educationLevel?.trim()) request.educationLevel = formData.educationLevel.trim();
+    
+    // Convert string boolean values
+    if (formData.projectParticipation === 'true') request.projectParticipation = true;
+    else if (formData.projectParticipation === 'false') request.projectParticipation = false;
+    
+    if (formData.registrationDateFrom?.trim()) request.registrationDateFrom = formData.registrationDateFrom.trim();
+    if (formData.registrationDateTo?.trim()) request.registrationDateTo = formData.registrationDateTo.trim();
+    if (formData.guardianName?.trim()) request.guardianName = formData.guardianName.trim();
+    if (formData.orphanId?.trim()) request.orphanId = formData.orphanId.trim();
+
+    return request;
   }
 
   // Load more orphans for pagination
@@ -287,21 +430,89 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   createGiftForm(): FormGroup {
-    // Format today's date as MM/dd/yyyy
     const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const year = today.getFullYear();
-    const formattedDate = `${year}-${month}-${day}`; // Still use ISO format for form value
+    const formattedDate = today.toISOString().split('T')[0];
     
     return this.fb.group({
       donorId: ['', Validators.required],
+      giftTypeId: [null, Validators.required],
+      customGiftTypeName: [''],
       amount: ['', [Validators.required, Validators.min(0.01)]],
       date: [formattedDate, Validators.required],
-      description: [''],
-      giftType: [GiftType.DONATION, Validators.required],
-      kafalaFrequency: [''],
-      isKafala: [false]
+      beneficiaryType: [BeneficiaryType.CHARITY, Validators.required],
+      orphanId: [null],
+      projectId: [null],
+      description: ['']
+    });
+  }
+
+  createSponsorshipGiftForm(): FormGroup {
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    
+    return this.fb.group({
+      giftTypeId: ['', Validators.required],
+      customGiftTypeName: [''],
+      giftName: ['', Validators.required],
+      giftValue: ['', [Validators.required, Validators.min(0.01)]],
+      giftDate: [formattedDate, Validators.required],
+      description: ['']
+    });
+  }
+
+  createDonorForm(): FormGroup {
+    return this.fb.group({
+      donorId: ['', Validators.required],
+      name: ['', Validators.required],
+      email: ['', [Validators.email]],
+      phone: [''],
+      address: [''],
+      city: [''],
+      state: [''],
+      zip: [''],
+      country: [''],
+      company: ['']
+    });
+  }
+
+  createSponsorshipForm(): FormGroup {
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    
+    return this.fb.group({
+      donorId: ['', Validators.required],
+      sponsorshipType: ['MONTHLY', Validators.required],
+      startDate: [formattedDate, Validators.required],
+      endDate: [''],
+      giftValue: [0, [Validators.required, Validators.min(0.01)]]
+    });
+  }
+
+  createAdvancedSearchForm(): FormGroup {
+    return this.fb.group({
+      // Personal Info
+      name: [''],
+      gender: [''],
+      ageFrom: [null],
+      ageTo: [null],
+      country: [''],
+      city: [''],
+      placeOfBirth: [''],
+      
+      // Sponsorship Info
+      isSponsored: [''],
+      sponsorshipType: [''],
+      sponsorshipStartDate: [''],
+      sponsorshipEndDate: [''],
+      
+      // Other Info
+      healthStatus: [''],
+      educationLevel: [''],
+      projectParticipation: [''],
+      registrationDateFrom: [''],
+      registrationDateTo: [''],
+      guardianName: [''],
+      orphanId: ['']
     });
   }
 
@@ -391,6 +602,10 @@ export class OrphanManagementComponent implements OnInit {
   loadOrphanDetails(orphanId: number): void {
     console.log('Loading orphan details for ID:', orphanId);
     this.isLoading = true;
+    
+    // Reset document upload form state when switching orphans
+    this.showDocumentUpload = false;
+    
     this.orphanService.getOrphanById(orphanId).subscribe({
       next: (orphan) => {
         console.log('Loaded orphan details:', orphan);
@@ -399,6 +614,12 @@ export class OrphanManagementComponent implements OnInit {
         this.isEditing = true;
         this.isCreating = false;
         this.isLoading = false;
+        
+        // Trigger document refresh for the newly selected orphan
+        this.documentRefreshTrigger = {};
+        
+        // Load sponsorships for this orphan
+        this.loadSponsorships();
         
         // If we're on the gifts tab, load the gifts
         if (this.activeSection === 'gifts') {
@@ -739,6 +960,11 @@ export class OrphanManagementComponent implements OnInit {
       return defaultAvatar;
     }
     
+    // Special case: if the value is exactly "Photo", it's likely a placeholder and should be treated as invalid
+    if (cleanPhoto === "Photo") {
+      return defaultAvatar;
+    }
+    
     // Check for upload path format (starts with /uploads/ or uploads/)
     if (cleanPhoto.includes('/uploads/') || cleanPhoto.startsWith('uploads/')) {
       // Valid upload path
@@ -1069,16 +1295,90 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   // Gift Management Methods
+  loadGiftTypes(): void {
+    this.giftTypeService.getAllGiftTypesWithBalances().subscribe({
+      next: (types: GiftTypeModel[]) => {
+        this.giftTypes = types;
+      },
+      error: (error: any) => {
+        console.error('Error loading gift types:', error);
+      }
+    });
+  }
+
+  loadProjects(): void {
+    this.charityProjectService.getProjects().subscribe({
+      next: (projects: CharityProject[]) => {
+        this.availableProjects = projects;
+      },
+      error: (error: any) => {
+        console.error('Error loading projects:', error);
+      }
+    });
+  }
+
+  onGiftTypeChange(): void {
+    const giftTypeId = this.giftForm.get('giftTypeId')?.value;
+    const customNameControl = this.giftForm.get('customGiftTypeName');
+    
+    if (giftTypeId === 'custom') {
+      customNameControl?.setValidators([Validators.required]);
+    } else {
+      customNameControl?.clearValidators();
+      customNameControl?.setValue('');
+    }
+    customNameControl?.updateValueAndValidity();
+  }
+
+  onBeneficiaryTypeChange(type: BeneficiaryType): void {
+    this.beneficiaryType = type;
+    const orphanIdControl = this.giftForm.get('orphanId');
+    const projectIdControl = this.giftForm.get('projectId');
+    
+    // Clear validators first
+    orphanIdControl?.clearValidators();
+    projectIdControl?.clearValidators();
+    
+    // Set validators based on beneficiary type
+    if (type === BeneficiaryType.ORPHAN) {
+      orphanIdControl?.setValidators([Validators.required]);
+      projectIdControl?.setValue(null);
+    } else if (type === BeneficiaryType.PROJECT) {
+      projectIdControl?.setValidators([Validators.required]);
+      orphanIdControl?.setValue(null);
+    } else {
+      // Charity - no specific beneficiary required
+      orphanIdControl?.setValue(null);
+      projectIdControl?.setValue(null);
+    }
+    
+    orphanIdControl?.updateValueAndValidity();
+    projectIdControl?.updateValueAndValidity();
+  }
+
   openAddGiftModal(orphan: OrphanListDTO): void {
     this.selectedOrphanForGift = orphan;
     this.loadDonors();
+    this.resetGiftForm();
+    this.isGiftModalVisible = true;
+  }
+
+  resetGiftForm(): void {
     this.giftForm.reset();
     this.giftForm.patchValue({
+      donorId: '',
       date: new Date().toISOString().split('T')[0],
-      giftType: GiftType.DONATION,
-      isKafala: false
+      beneficiaryType: BeneficiaryType.CHARITY,
+      giftTypeId: null,
+      customGiftTypeName: '',
+      amount: '',
+      orphanId: null,
+      projectId: null,
+      description: ''
     });
-    this.isGiftModalVisible = true;
+    this.beneficiaryType = BeneficiaryType.CHARITY;
+    this.giftError = '';
+    this.giftSuccess = '';
   }
 
   openGiftHistoryModal(orphan: OrphanListDTO): void {
@@ -1104,17 +1404,6 @@ export class OrphanManagementComponent implements OnInit {
     // No need to reload detail gifts - they should remain intact
   }
 
-  loadDonors(): void {
-    this.donorService.getDonors().subscribe({
-      next: (donors) => {
-        this.donors = donors;
-      },
-      error: (error) => {
-        console.error('Error loading donors:', error);
-      }
-    });
-  }
-
   loadOrphanGifts(orphanId: number): void {
     this.isLoadingModalGifts = true;
     this.giftService.getGiftsByOrphan(orphanId).subscribe({
@@ -1130,68 +1419,78 @@ export class OrphanManagementComponent implements OnInit {
     });
   }
 
-  onGiftTypeChange(): void {
-    const giftType = this.giftForm.get('giftType')?.value;
-    const isKafala = giftType === GiftType.KAFALA;
-    this.giftForm.patchValue({ isKafala });
-    
-    if (isKafala) {
-      this.giftForm.get('kafalaFrequency')?.setValidators([Validators.required]);
-    } else {
-      this.giftForm.get('kafalaFrequency')?.clearValidators();
-      this.giftForm.patchValue({ kafalaFrequency: '' });
-    }
-    this.giftForm.get('kafalaFrequency')?.updateValueAndValidity();
-  }
 
-  submitGift(): void {
-    if (this.giftForm.valid && this.selectedOrphanForGift) {
-      this.isAddingGift = true;
+  async submitGift(): Promise<void> {
+    if (!this.giftForm.valid || !this.selectedOrphanForGift) {
+      return;
+    }
+
+    this.isSubmittingGift = true;
+    this.giftError = '';
+    this.giftSuccess = '';
+
+    try {
       const formValue = this.giftForm.value;
-      
-      // Convert Date object to ISO format for backend
-      let dateValue = '';
-      if (formValue.date) {
-        try {
-          const date = formValue.date instanceof Date ? formValue.date : new Date(formValue.date);
-          if (!isNaN(date.getTime())) {
-            dateValue = date.toISOString();
-          }
-        } catch (e) {
-          console.error('Error converting date:', e);
-        }
+      let giftTypeId = formValue.giftTypeId;
+
+      // Handle custom gift type creation
+      if (formValue.giftTypeId === 'custom' && formValue.customGiftTypeName) {
+        const newGiftType = await this.giftTypeService.createGiftType({
+          name: formValue.customGiftTypeName,
+          description: `Custom gift type: ${formValue.customGiftTypeName}`
+        }).toPromise();
+        giftTypeId = newGiftType?.id;
       }
-      
-      const giftRequest: CreateGiftRequest = {
-        orphanId: this.selectedOrphanForGift.id,
+
+      if (!giftTypeId) {
+        this.giftError = 'Please select or create a valid gift type';
+        this.isSubmittingGift = false;
+        return;
+      }
+
+      // Check gift type balance
+      const hasBalance = await this.giftService.checkGiftTypeBalance(giftTypeId, formValue.amount).toPromise();
+      if (!hasBalance) {
+        this.giftError = 'Insufficient balance in the selected gift type fund';
+        this.isSubmittingGift = false;
+        return;
+      }
+
+      // Prepare gift request
+      const giftRequest: CreateGiftRequestV2 = {
         donorId: formValue.donorId,
+        giftTypeId: giftTypeId,
         amount: formValue.amount,
-        date: dateValue,
+        giftName: formValue.description || 'Gift for Orphan', // Use description as gift name or default
+        date: formValue.date,
         description: formValue.description || '',
-        giftType: formValue.giftType,
-        isKafala: formValue.isKafala,
-        kafalaFrequency: formValue.isKafala ? formValue.kafalaFrequency : null
+        beneficiaryType: formValue.beneficiaryType,
+        orphanId: formValue.beneficiaryType === BeneficiaryType.ORPHAN ? this.selectedOrphanForGift.id : undefined,
+        projectId: formValue.beneficiaryType === BeneficiaryType.PROJECT ? formValue.projectId : undefined
       };
 
-      this.giftService.createGift(giftRequest).subscribe({
-        next: (gift) => {
-          console.log('Gift created successfully:', gift);
-          this.closeGiftModal();
-          
-          // Refresh detail view gifts if on gifts tab
-          if (this.activeSection === 'gifts') {
-            this.loadOrphanGiftsForDetail();
-          }
-          
-          // Refresh the list to show updated kafala info
-          this.loadOrphansList();
-          this.isAddingGift = false;
-        },
-        error: (error) => {
-          console.error('Error creating gift:', error);
-          this.isAddingGift = false;
-        }
-      });
+      // Create gift
+      const gift = await this.giftService.createGiftV2(giftRequest).toPromise();
+      
+      this.giftSuccess = 'Gift added successfully!';
+      this.resetGiftForm();
+      
+      // Refresh data
+      if (this.activeSection === 'gifts') {
+        this.loadOrphanGiftsForDetail();
+      }
+      this.loadOrphansList();
+      
+      // Close modal after short delay
+      setTimeout(() => {
+        this.closeGiftModal();
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error('Error creating gift:', error);
+      this.giftError = error.error?.message || 'Failed to create gift. Please try again.';
+    } finally {
+      this.isSubmittingGift = false;
     }
   }
 
@@ -1241,6 +1540,49 @@ export class OrphanManagementComponent implements OnInit {
     } catch (e) {
       return '';
     }
+  }
+  
+  // Check if a sponsorship is active based on its status field
+  getSponsorshipStatus(sponsorship: any): string {
+    // Use the status field from backend if available
+    if (sponsorship.status) {
+      return sponsorship.status;
+    }
+    
+    // Fallback to date-based logic for backward compatibility
+    if (!sponsorship.endDate) {
+      return 'ACTIVE';
+    }
+    
+    const endDate = new Date(sponsorship.endDate);
+    const today = new Date();
+    
+    return endDate > today ? 'ACTIVE' : 'EXPIRED';
+  }
+  
+  // Check if an orphan is currently sponsored
+  isOrphanSponsored(): boolean {
+    // Always check for active sponsorships in the array first
+    if (this.selectedOrphan?.sponsorships && this.selectedOrphan.sponsorships.length > 0) {
+      // Check if any sponsorship has ACTIVE status
+      const hasActiveSponsorship = this.selectedOrphan.sponsorships.some(s => 
+        this.getSponsorshipStatus(s) === 'ACTIVE'
+      );
+      
+      // Update the isSponsored field to match our calculation
+      if (this.selectedOrphan) {
+        this.selectedOrphan.isSponsored = hasActiveSponsorship;
+      }
+      
+      return hasActiveSponsorship;
+    }
+    
+    // If no sponsorships array, use the isSponsored field if available
+    if (this.selectedOrphan?.isSponsored !== undefined) {
+      return this.selectedOrphan.isSponsored;
+    }
+    
+    return false;
   }
   
   // Format date input to MM/dd/yyyy when user leaves the field
@@ -1402,5 +1744,393 @@ export class OrphanManagementComponent implements OnInit {
       this.orphanGifts = [];
       this.isLoadingGifts = false;
     }
+  }
+
+  // Sponsorship-related methods for new sections
+  openAddDonorForm(): void {
+    this.donorForm.reset();
+    this.sponsorshipForm.reset();
+    
+    // Set default values for sponsorship form
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    this.sponsorshipForm.patchValue({
+      sponsorshipType: 'MONTHLY',
+      startDate: formattedDate
+    });
+    
+    this.isAddDonorModalVisible = true;
+  }
+
+  openSelectDonorForm(): void {
+    // Load existing donors
+    this.loadDonors();
+    this.sponsorshipForm.reset();
+    
+    // Set default values for sponsorship form
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    this.sponsorshipForm.patchValue({
+      sponsorshipType: 'MONTHLY',
+      startDate: formattedDate
+    });
+    
+    this.isSelectDonorModalVisible = true;
+  }
+
+  openAddGiftForm(): void {
+    // Check if there are sponsorships available
+    if (!this.selectedOrphan || !this.selectedOrphan.sponsorships || this.selectedOrphan.sponsorships.length === 0) {
+      this.snackBar.open('No sponsorships available. Please add a sponsorship first.', 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+    
+    // Open the new sponsorship-based gift modal
+    this.sponsorshipGiftForm.reset();
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    this.sponsorshipGiftForm.patchValue({
+      giftDate: formattedDate
+    });
+    this.isSponsorshipGiftModalVisible = true;
+  }
+
+  loadSponsorships(): void {
+    if (this.selectedOrphan && this.selectedOrphan.id) {
+      console.log('Loading sponsorships for orphan ID:', this.selectedOrphan.id);
+      this.sponsorshipService.getSponsorshipsByOrphanId(this.selectedOrphan.id).subscribe({
+        next: (sponsorships) => {
+          console.log('Loaded sponsorships:', sponsorships);
+          // Update the selected orphan with sponsorship data
+          if (this.selectedOrphan) {
+            this.selectedOrphan.sponsorships = sponsorships.map(s => ({
+              id: s.id || 0,
+              donorId: s.donorId,
+              donorName: s.donorName || 'Unknown Donor',
+              sponsorshipType: s.sponsorshipType,
+              amount: (s as any).amount || 0, // Add amount field with fallback
+              status: s.status || 'ACTIVE', // Add status field with fallback
+              startDate: s.startDate,
+              endDate: s.endDate,
+              gifts: (s.gifts || []).map(g => ({
+                id: g.id || 0,
+                giftName: g.giftName,
+                giftDate: g.giftDate,
+                description: g.description,
+                giftValue: g.giftValue
+              }))
+            }));
+          }
+        },
+        error: (error) => {
+          console.error('Error loading sponsorships:', error);
+          // Initialize empty sponsorships array on error
+          if (this.selectedOrphan) {
+            this.selectedOrphan.sponsorships = [];
+          }
+        }
+      });
+    }
+  }
+
+  // This method has been moved to line ~1294
+
+  // Sponsorship-based gift modal methods
+  closeSponsorshipGiftModal(): void {
+    this.isSponsorshipGiftModalVisible = false;
+    this.sponsorshipGiftForm.reset();
+    this.isSubmittingGift = false;
+  }
+
+  submitSponsorshipGift(): void {
+    if (this.sponsorshipGiftForm.valid && !this.isSubmittingGift && this.selectedOrphan) {
+      this.isSubmittingGift = true;
+      
+      const formValue = this.sponsorshipGiftForm.value;
+      
+      // Handle custom gift type creation if needed
+      let giftTypeId = formValue.giftTypeId;
+      if (giftTypeId === 'custom' && formValue.customGiftTypeName) {
+        // Create a new gift type first
+        const newGiftTypeRequest = {
+          name: formValue.customGiftTypeName,
+          description: 'Custom gift type created by user'
+        };
+
+        this.giftTypeService.createGiftType(newGiftTypeRequest).subscribe({
+          next: (createdType: GiftTypeModel) => {
+            this.giftTypes.push(createdType);
+            this.processGiftSubmission(createdType.id);
+          },
+          error: (error: any) => {
+            this.isSubmittingGift = false;
+            this.snackBar.open('Error creating custom gift type: ' + (error.error?.message || error.message || 'Unknown error'), 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
+      } else {
+        // Use existing gift type
+        this.processGiftSubmission(+giftTypeId);
+      }
+    }
+  }
+
+  processGiftSubmission(giftTypeId: number): void {
+    const formValue = this.sponsorshipGiftForm.value;
+    
+    // Check balance before creating gift
+    this.giftService.checkGiftTypeBalance(giftTypeId, +formValue.giftValue).subscribe({
+      next: (hasSufficientBalance) => {
+        if (!hasSufficientBalance) {
+          this.isSubmittingGift = false;
+          this.snackBar.open('There is not enough balance for this type of gift', 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+          return;
+        }
+        
+        // Convert date string to ISO DateTime format for backend
+        const giftDate = new Date(formValue.giftDate);
+        
+        const giftRequest: CreateGiftRequestV2 = {
+          donorId: 1, // Default donor ID since not shown in form
+          giftTypeId: giftTypeId,
+          amount: +formValue.giftValue,
+          giftName: formValue.giftName || 'Gift',
+          date: giftDate.toISOString().split('T')[0],
+          description: formValue.description || undefined,
+          beneficiaryType: 'orphan',
+          orphanId: this.selectedOrphan?.id
+        };
+
+        this.giftService.createGiftV2(giftRequest).subscribe({
+          next: (response) => {
+            this.isSubmittingGift = false;
+            this.closeSponsorshipGiftModal();
+            
+            // Reload sponsorships to show the new gift
+            this.loadSponsorships();
+            
+            this.snackBar.open('Gift added successfully!', 'Close', {
+              duration: 3000,
+              panelClass: ['success-snackbar']
+            });
+          },
+          error: (error) => {
+            this.isSubmittingGift = false;
+            console.error('Error adding gift:', error);
+            
+            let errorMessage = 'Failed to add gift. Please try again.';
+            if (error.error && error.error.message) {
+              errorMessage = error.error.message;
+            }
+            
+            this.snackBar.open(errorMessage, 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
+      },
+      error: (error: any) => {
+        this.isSubmittingGift = false;
+        this.snackBar.open('Error checking balance: ' + (error.error?.message || error.message || 'Unknown error'), 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+
+  // Cancel sponsorship method
+  cancelSponsorship(sponsorship: any): void {
+    if (confirm(`Are you sure you want to cancel the sponsorship with ${sponsorship.donorName}?`)) {
+      this.sponsorshipService.cancelSponsorship(sponsorship.id).subscribe({
+        next: (updatedSponsorship) => {
+          // Update the sponsorship in the local array
+          if (this.selectedOrphan && this.selectedOrphan.sponsorships) {
+            const index = this.selectedOrphan.sponsorships.findIndex(s => s.id === sponsorship.id);
+            if (index !== -1) {
+              // Update the status directly
+              this.selectedOrphan.sponsorships[index].status = 'CANCELLED';
+              this.selectedOrphan.sponsorships[index].endDate = new Date().toISOString().split('T')[0];
+            }
+          }
+          
+          // Refresh the orphan data completely to ensure all UI elements update
+          if (this.selectedOrphan && this.selectedOrphan.id) {
+            this.loadOrphanDetails(this.selectedOrphan.id);
+          }
+          
+          this.snackBar.open('Sponsorship cancelled successfully', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        },
+        error: (error) => {
+          console.error('Error cancelling sponsorship:', error);
+          this.snackBar.open('Error cancelling sponsorship', 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Load donors for selection
+  loadDonors(): void {
+    this.donorService.getDonors().subscribe({
+      next: (donors: Donor[]) => {
+        this.donors = donors;
+      },
+      error: (error: any) => {
+        console.error('Error loading donors:', error);
+        this.donors = [];
+      }
+    });
+  }
+
+
+  // Modal closing methods
+  closeAddDonorModal(): void {
+    this.isAddDonorModalVisible = false;
+    this.donorForm.reset();
+    this.sponsorshipForm.reset();
+    this.isCreatingSponsorshipWithNewDonor = false;
+  }
+
+  closeSelectDonorModal(): void {
+    this.isSelectDonorModalVisible = false;
+    this.sponsorshipForm.reset();
+    this.isCreatingSponsorshipWithExistingDonor = false;
+  }
+
+  // Create new donor and sponsorship
+  createDonorWithSponsorship(): void {
+    if (this.donorForm.valid && this.sponsorshipForm.valid && this.selectedOrphan) {
+      this.isCreatingSponsorshipWithNewDonor = true;
+
+      const donorData = this.donorForm.value;
+      
+      // First create the donor
+      this.donorService.createDonor(donorData).subscribe({
+        next: (createdDonor) => {
+          // Then create the sponsorship
+          const sponsorshipData = {
+            ...this.sponsorshipForm.value,
+            donorId: createdDonor.id,
+            orphanId: this.selectedOrphan!.id
+          };
+
+          this.sponsorshipService.createSponsorship(sponsorshipData).subscribe({
+            next: (sponsorship) => {
+              this.isCreatingSponsorshipWithNewDonor = false;
+              this.closeAddDonorModal();
+              
+              // Reload sponsorships to show the new one
+              this.loadSponsorships();
+              
+              this.snackBar.open('Donor and sponsorship created successfully!', 'Close', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+            },
+            error: (error) => {
+              this.isCreatingSponsorshipWithNewDonor = false;
+              console.error('Error creating sponsorship:', error);
+              
+              let errorMessage = 'Failed to create sponsorship. Please try again.';
+              if (error.error && error.error.message) {
+                errorMessage = error.error.message;
+              }
+              
+              this.snackBar.open(errorMessage, 'Close', {
+                duration: 5000,
+                panelClass: ['error-snackbar']
+              });
+            }
+          });
+        },
+        error: (error) => {
+          this.isCreatingSponsorshipWithNewDonor = false;
+          console.error('Error creating donor:', error);
+          
+          let errorMessage = 'Failed to create donor. Please try again.';
+          if (error.error && error.error.message) {
+            errorMessage = error.error.message;
+          }
+          
+          this.snackBar.open(errorMessage, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Create sponsorship with existing donor
+  createSponsorshipWithExistingDonor(): void {
+    if (this.sponsorshipForm.valid && this.selectedOrphan) {
+      this.isCreatingSponsorshipWithExistingDonor = true;
+
+      const sponsorshipData = {
+        ...this.sponsorshipForm.value,
+        orphanId: this.selectedOrphan.id
+      };
+
+      this.sponsorshipService.createSponsorship(sponsorshipData).subscribe({
+        next: (sponsorship) => {
+          this.isCreatingSponsorshipWithExistingDonor = false;
+          this.closeSelectDonorModal();
+          
+          // Reload sponsorships to show the new one
+          this.loadSponsorships();
+          
+          this.snackBar.open('Sponsorship created successfully!', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        },
+        error: (error) => {
+          this.isCreatingSponsorshipWithExistingDonor = false;
+          console.error('Error creating sponsorship:', error);
+          
+          let errorMessage = 'Failed to create sponsorship. Please try again.';
+          if (error.error && error.error.message) {
+            errorMessage = error.error.message;
+          }
+          
+          this.snackBar.open(errorMessage, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Document management methods
+  onDocumentUploaded(document: OrphanDocument): void {
+    this.showDocumentUpload = false;
+    this.documentRefreshTrigger = {}; // Trigger refresh of document list
+    
+    this.snackBar.open('Document uploaded successfully!', 'Close', {
+      duration: 3000,
+      panelClass: ['success-snackbar']
+    });
+  }
+  
+  onDocumentDeleted(documentId: number): void {
+    this.documentRefreshTrigger = {}; // Trigger refresh of document list
+    // No need for a snackbar message here as it's already shown in the document-upload component
   }
 }

@@ -14,12 +14,39 @@ export interface OrphanDetailDTO {
   familyInformation?: FamilyInformationDTO;
   education?: EducationDTO;
   
-  // Kafala Information
+  // Kafala Information (legacy)
   kafalaAmount?: number;
   kafalaFrequency?: string;
   donorName?: string;
   donorId?: number;
   hasKafala?: boolean;
+  
+  // Dynamic Sponsorship Status
+  isSponsored?: boolean;
+  
+  // New Sponsorship Information
+  sponsorships?: SponsorshipInfo[];
+  currentSponsorship?: SponsorshipInfo;
+}
+
+export interface SponsorshipInfo {
+  id: number;
+  donorId: number;
+  donorName: string;
+  sponsorshipType: 'MONTHLY' | 'YEARLY';
+  amount: number;
+  status?: string;
+  startDate: string;
+  endDate?: string;
+  gifts?: GiftInfo[];
+}
+
+export interface GiftInfo {
+  id: number;
+  giftName: string;
+  giftDate: string;
+  description?: string;
+  giftValue: number;
 }
 
 export interface FamilyInformationDTO {

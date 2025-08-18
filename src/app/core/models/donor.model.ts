@@ -22,4 +22,59 @@ export interface DonorListDTO {
   city: string;
   country: string;
   company?: string;
+  totalOrphansSponsored?: number;
+  currentDonationBalance?: number;
+}
+
+export interface DonorDetailDTO {
+  id: number;
+  donorId: string;
+  name: string;
+  address: string;
+  addressTwo?: string;
+  phone: string;
+  city: string;
+  state: string;
+  zip: string;
+  company?: string;
+  email: string;
+  country: string;
+  sponsorships?: DonorSponsorshipInfo[];
+  donations?: DonorDonationInfo[];
+  statistics?: DonorStatisticsInfo;
+}
+
+export interface DonorSponsorshipInfo {
+  id: number;
+  orphanId: number;
+  orphanName: string;
+  sponsorshipType: 'MONTHLY' | 'YEARLY';
+  startDate: string;
+  endDate?: string;
+  gifts?: DonorGiftInfo[];
+}
+
+export interface DonorGiftInfo {
+  id: number;
+  giftName: string;
+  giftDate: string;
+  description?: string;
+  giftValue: number;
+  orphanName: string;
+}
+
+export interface DonorDonationInfo {
+  id: number;
+  amount: number;
+  donationDate: string;
+  description?: string;
+}
+
+export interface DonorStatisticsInfo {
+  totalOrphansSponsored: number;
+  totalGiftsGiven: number;
+  totalSponsorshipDuration: number;
+  currentDonationBalance: number;
+  totalDonations: number;
+  totalGifts: number;
 }

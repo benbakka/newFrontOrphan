@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ImageProxyService } from '../../../core/services/image-proxy.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-proxy-image',
@@ -113,40 +114,77 @@ export class ProxyImageComponent implements OnInit {
       return;
     }
 
-    // Check if it's already a data URL or regular HTTP URL that doesn't need proxy
-    if (this.imageUrl.startsWith('data:') || this.imageUrl.startsWith('/uploads/')) {
-      this.imageDataUrl = this.imageUrl.startsWith('/uploads/') 
-        ? `http://localhost:8080${this.imageUrl}` 
-        : this.imageUrl;
-      this.loading = false;
-      this.error = false;
-      return;
-    }
-
-    // Use proxy for external URLs (Google Drive, etc.)
+    // Reset state
     this.loading = true;
     this.error = false;
     this.errorMessage = '';
 
+    // Check if it's already a data URL
+    if (this.imageUrl.startsWith('data:')) {
+      this.imageDataUrl = this.imageUrl;
+      this.loading = false;
+      return;
+    }
+
+    // Handle local uploads path
+    if (this.imageUrl.startsWith('/uploads/') || this.imageUrl.startsWith('uploads/')) {
+      // Ensure path starts with slash
+      const normalizedPath = this.imageUrl.startsWith('/') ? this.imageUrl : `/${this.imageUrl}`;
+      // Use the backend URL for local images
+      this.imageDataUrl = `${environment.apiUrl}${normalizedPath}`;
+      this.loading = false;
+      return;
+    }
+
+    // Use proxy for external URLs (Google Drive, etc.)
     this.imageProxyService.getImageAsBase64(this.imageUrl).subscribe({
       next: (response) => {
         this.imageDataUrl = response.data;
         this.loading = false;
-        this.error = false;
       },
       error: (error) => {
         console.error('Error loading image via proxy:', error);
         this.loading = false;
         this.error = true;
-        this.errorMessage = 'Failed to load image';
+        this.errorMessage = 'Failed to load image. Try migrating images to local storage.';
         this.imageDataUrl = '';
       }
     });
   }
 
   onImageError() {
-    this.error = true;
-    this.errorMessage = 'Image failed to display';
-    this.imageDataUrl = '';
+    // If a local image fails to load, show error
+    if (this.imageUrl.startsWith('/uploads/')) {
+      this.error = true;
+      this.errorMessage = 'Local image not found';
+      this.imageDataUrl = '';
+      return;
+    }
+    
+    // If an external image fails to load, try using the proxy as fallback
+    if (!this.imageUrl.startsWith('data:') && !this.loading) {
+      console.log('Image failed to load directly, trying proxy:', this.imageUrl);
+      this.loading = true;
+      this.error = false;
+      
+      this.imageProxyService.getImageAsBase64(this.imageUrl).subscribe({
+        next: (response) => {
+          this.imageDataUrl = response.data;
+          this.loading = false;
+          this.error = false;
+        },
+        error: (error) => {
+          console.error('Fallback proxy also failed:', error);
+          this.loading = false;
+          this.error = true;
+          this.errorMessage = 'Image could not be loaded';
+          this.imageDataUrl = '';
+        }
+      });
+    } else {
+      this.error = true;
+      this.errorMessage = 'Image failed to display';
+      this.imageDataUrl = '';
+    }
   }
 }

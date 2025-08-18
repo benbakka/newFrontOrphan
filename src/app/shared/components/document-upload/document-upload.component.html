@@ -1,0 +1,220 @@
+<div class="document-upload-container">
+  <!-- Upload Form Toggle Button -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-0">
+      <i class="fas fa-file-upload me-2"></i>
+      Documents & Certificates
+      <span class="badge bg-secondary ms-2">{{ documents.length }}/4</span>
+    </h6>
+    <button 
+      type="button" 
+      class="btn btn-primary btn-sm"
+      (click)="toggleUploadForm()" 
+      *ngIf="!showUploadForm && documents.length < 4"
+      [disabled]="documents.length >= 4">
+      <i class="fas fa-plus"></i>
+      Add Document
+    </button>
+    <span *ngIf="documents.length >= 4" class="text-muted small">
+      <i class="fas fa-info-circle me-1"></i>
+      Maximum 4 documents allowed
+    </span>
+  </div>
+
+  <!-- Upload Form -->
+  <div class="upload-form-container" [class.show]="showUploadForm">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form [formGroup]="uploadForm" (ngSubmit)="onSubmit()">
+          
+          <!-- File Drop Zone -->
+          <div class="file-drop-zone mb-3"
+               [class.drag-over]="dragOver"
+               [class.has-file]="selectedFile"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)"
+               (click)="fileInput.click()">
+            
+            <input type="file" 
+                   #fileInput
+                   id="fileInput"
+                   accept=".pdf,.png,.jpg,.jpeg"
+                   (change)="onFileSelected($event)"
+                   style="display: none;">
+            
+            <div class="drop-zone-content" *ngIf="!selectedFile">
+              <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+              <p class="mb-2"><strong>Drop files here or click to browse</strong></p>
+              <p class="text-muted small">Supported formats: PDF, PNG, JPG, JPEG (Max 50MB)</p>
+            </div>
+            
+            <div class="selected-file-info" *ngIf="selectedFile">
+              <div class="d-flex align-items-center">
+                <i [class]="getFileIcon()" [class]="getFileTypeColor()" class="fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">{{ selectedFile.name }}</h6>
+                  <small class="text-muted">{{ formatFileSize(selectedFile.size) }}</small>
+                </div>
+                <button type="button" 
+                        class="btn btn-outline-danger btn-sm"
+                        (click)="removeSelectedFile(); $event.stopPropagation()">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div class="alert alert-danger" *ngIf="errorMessage">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ errorMessage }}
+          </div>
+
+          <!-- Form Fields -->
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="documentName" class="form-label">
+                <i class="fas fa-tag me-1"></i>
+                Document Name *
+              </label>
+              <input type="text" 
+                     id="documentName"
+                     class="form-control"
+                     formControlName="documentName"
+                     placeholder="Enter document name">
+              <div class="invalid-feedback" 
+                   *ngIf="uploadForm.get('documentName')?.invalid && uploadForm.get('documentName')?.touched">
+                Document name is required (minimum 2 characters)
+              </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="documentType" class="form-label">
+                <i class="fas fa-list me-1"></i>
+                Document Type *
+              </label>
+              <select id="documentType" 
+                      class="form-select"
+                      formControlName="documentType">
+                <option *ngFor="let type of documentTypes" [value]="type">
+                  {{ documentTypeLabels[type] }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label">
+              <i class="fas fa-comment me-1"></i>
+              Description (Optional)
+            </label>
+            <textarea id="description" 
+                      class="form-control"
+                      formControlName="description"
+                      rows="2"
+                      placeholder="Add any additional notes about this document"></textarea>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" 
+                    class="btn btn-outline-secondary"
+                    (click)="resetForm()"
+                    [disabled]="isUploading">
+              <i class="fas fa-undo me-1"></i>
+              Reset
+            </button>
+            <button type="submit" 
+                    class="btn btn-success"
+                    [disabled]="!uploadForm.valid || !selectedFile || isUploading">
+              <span *ngIf="isUploading" class="spinner-border spinner-border-sm me-2"></span>
+              <i class="fas fa-upload me-1" *ngIf="!isUploading"></i>
+              {{ isUploading ? 'Uploading...' : 'Upload Document' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document List Section -->
+<div class="document-list mt-4" *ngIf="orphanId && !showUploadForm">
+  <!-- Loading State -->
+  <div *ngIf="isLoadingDocuments" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading documents...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="documentError" class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ documentError }}
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoadingDocuments && documents.length === 0 && !documentError" class="text-center py-4 border rounded">
+    <i class="fas fa-file-upload fa-3x text-muted mb-3"></i>
+    <p class="mb-3">No documents uploaded yet</p>
+    <button class="btn btn-outline-primary" (click)="toggleUploadForm()" *ngIf="documents.length < 4">
+      <i class="fas fa-plus me-1"></i>
+      Upload First Document
+    </button>
+  </div>
+
+  <!-- Document List -->
+  <div *ngIf="!isLoadingDocuments && documents.length > 0" class="row row-cols-1 row-cols-md-2 g-3">
+    <div class="col" *ngFor="let document of documents">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="card-title mb-1 text-truncate" [title]="document.documentName">
+                <i [class]="documentService.getFileIcon(document.mimeType)" 
+                   [ngClass]="documentService.getFileTypeColor(document.mimeType)" 
+                   class="me-2"></i>
+                {{ document.documentName }}
+              </h6>
+              <p class="card-text small text-muted mb-1">
+                {{ documentTypeLabels[document.documentType] }}
+              </p>
+              <p class="card-text small text-muted">
+                <span>{{ documentService.formatFileSize(document.fileSize) }}</span>
+                <span class="mx-1">•</span>
+                <span>{{ document.uploadDate | date:'medium' }}</span>
+              </p>
+            </div>
+            <div class="dropdown position-relative">
+              <button class="btn btn-sm btn-light" type="button" 
+                      (click)="toggleDropdown(document.id); $event.stopPropagation()"
+                      [attr.aria-expanded]="openDropdownId === document.id">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <div class="dropdown-menu dropdown-menu-end" 
+                   [class.show]="openDropdownId === document.id"
+                   (click)="$event.stopPropagation()"
+                   style="position: absolute; right: 0; top: 100%; z-index: 1000;">
+                <a class="dropdown-item" [href]="documentService.apiUrl + '/' + document.id + '/preview'" target="_blank">
+                  <i class="fas fa-eye me-2"></i> Preview
+                </a>
+                <a class="dropdown-item" [href]="documentService.apiUrl + '/' + document.id + '/download'">
+                  <i class="fas fa-download me-2"></i> Download
+                </a>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-danger" (click)="deleteDocument(document.id)">
+                  <i class="fas fa-trash-alt me-2"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+          <p *ngIf="document.description" class="card-text small mt-2">
+            {{ document.description }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

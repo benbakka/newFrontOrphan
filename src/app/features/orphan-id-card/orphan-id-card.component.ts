@@ -1,15 +1,22 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OrphanService } from '../../core/services/orphan.service';
 import { PdfService } from '../../core/services/pdf.service';
-import { OrphanDetailDTO } from '../../core/models/orphan-detail.dto';
+import { SponsorshipService } from '../../core/services/sponsorship.service';
+import { DonationService } from '../../core/services/donation.service';
+import { DonorService } from '../../core/services/donor.service';
+import { OrphanDetailDTO, SponsorshipInfo, GiftInfo } from '../../core/models/orphan-detail.dto';
+import { Sponsorship, CreateSponsorshipRequest, CreateGiftRequest, SponsorshipType, SponsorshipWithGifts } from '../../core/models/sponsorship.model';
+import { Donor } from '../../core/models/donor.model';
+import { CreateDonationRequest } from '../../core/models/donation.model';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-orphan-id-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './orphan-id-card.component.html',
   styleUrls: ['./orphan-id-card.component.scss']
 })
@@ -20,11 +27,49 @@ export class OrphanIdCardComponent implements OnInit {
   issueDate = new Date().toISOString();
   validUntilDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
 
+  // Sponsorship related properties
+  sponsorships: SponsorshipWithGifts[] = [];
+  currentSponsorship: SponsorshipWithGifts | null = null;
+  showAddDonorForm = false;
+  showAddGiftForm = false;
+  availableDonors: Donor[] = [];
+  
+  // Form data
+  newSponsorshipForm = {
+    donorId: 0,
+    sponsorshipType: SponsorshipType.MONTHLY,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    giftValue: 0
+  };
+
+  newGiftForm = {
+    giftName: '',
+    giftDate: new Date().toISOString().split('T')[0],
+    description: '',
+    giftValue: 0
+  };
+
+  newDonorForm = {
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: '',
+    company: ''
+  };
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private orphanService: OrphanService,
-    private pdfService: PdfService
+    private pdfService: PdfService,
+    private sponsorshipService: SponsorshipService,
+    private donationService: DonationService,
+    private donorService: DonorService
   ) {}
 
   ngOnInit(): void {
@@ -42,6 +87,9 @@ export class OrphanIdCardComponent implements OnInit {
       next: (orphan) => {
         this.orphan = orphan;
         this.isLoading = false;
+        // Load sponsorships after orphan is loaded
+        this.loadSponsorships(id);
+        this.loadAvailableDonors();
       },
       error: (error) => {
         console.error('Error loading orphan:', error);
@@ -49,6 +97,106 @@ export class OrphanIdCardComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  loadSponsorships(orphanId: number): void {
+    this.sponsorshipService.getSponsorshipsByOrphanId(orphanId).subscribe({
+      next: (sponsorships) => {
+        this.sponsorships = sponsorships;
+        this.currentSponsorship = sponsorships.find(s => !s.endDate) || null;
+      },
+      error: (error) => {
+        console.error('Error loading sponsorships:', error);
+      }
+    });
+  }
+
+  loadAvailableDonors(): void {
+    this.donorService.getDonors().subscribe({
+      next: (donors) => {
+        this.availableDonors = donors;
+      },
+      error: (error) => {
+        console.error('Error loading donors:', error);
+      }
+    });
+  }
+
+  // Form methods - these are no longer needed as we use inline forms
+
+  openAddGiftForm(): void {
+    this.showAddGiftForm = true;
+    this.resetNewGiftForm();
+  }
+
+  closeAddGiftForm(): void {
+    this.showAddGiftForm = false;
+    this.resetNewGiftForm();
+  }
+
+  resetNewDonorForm(): void {
+    this.newDonorForm = {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: '',
+      company: ''
+    };
+    this.newSponsorshipForm = {
+      donorId: 0,
+      sponsorshipType: SponsorshipType.MONTHLY,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
+      giftValue: 0
+    };
+  }
+
+  resetNewGiftForm(): void {
+    this.newGiftForm = {
+      giftName: '',
+      giftDate: new Date().toISOString().split('T')[0],
+      description: '',
+      giftValue: 0
+    };
+  }
+
+
+  submitNewGift(): void {
+    if (!this.currentSponsorship || !this.orphan) return;
+
+    const giftRequest: CreateGiftRequest = {
+      sponsorshipId: this.currentSponsorship.id!,
+      giftName: this.newGiftForm.giftName,
+      giftDate: this.newGiftForm.giftDate,
+      description: this.newGiftForm.description,
+      giftValue: this.newGiftForm.giftValue
+    };
+
+    this.sponsorshipService.createGift(giftRequest).subscribe({
+      next: (gift) => {
+        console.log('Gift created successfully:', gift);
+        this.loadSponsorships(this.orphan!.id!);
+        this.closeAddGiftForm();
+        alert('Gift added successfully!');
+      },
+      error: (error) => {
+        console.error('Error creating gift:', error);
+        if (error.error && error.error.includes('insufficient balance')) {
+          alert('Cannot add gift, insufficient balance');
+        } else {
+          alert('Error adding gift');
+        }
+      }
+    });
+  }
+
+  // Helper methods
+  getSponsorshipTypeLabel(type: string): string {
+    return type === 'MONTHLY' ? 'Monthly' : 'Yearly';
   }
 
   getOrphanPhotoUrl(photo?: string): string {
@@ -78,16 +226,6 @@ export class OrphanIdCardComponent implements OnInit {
     return age;
   }
 
-  formatDate(dateString: string): string {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
-
   downloadCard(): void {
     if (!this.orphan) return;
     
@@ -103,12 +241,55 @@ export class OrphanIdCardComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('Error downloading ID card:', error);
-        alert('Error downloading ID card. Please try again.');
+        console.error('Error downloading card:', error);
+        alert('Error downloading ID card');
       }
     });
   }
 
+  getSponsorshipStatus(sponsorship: SponsorshipWithGifts): string {
+    if (!sponsorship.endDate) {
+      return 'Active';
+    }
+    
+    const endDate = new Date(sponsorship.endDate);
+    const today = new Date();
+    
+    return endDate < today ? 'Expired' : 'Active';
+  }
+
+  formatCurrency(amount: number): string {
+    if (amount === undefined || amount === null) return '-';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  getSponsorshipTypeArabic(type: string): string {
+    return type === 'MONTHLY' ? 'Monthly' : 'Yearly';
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-EG');
+  }
+
+  getRecentGifts(gifts: any[]): any[] {
+    if (!gifts || gifts.length === 0) return [];
+    return gifts.slice(0, 3); // Show only recent 3 gifts
+  }
+
+  goBack(): void {
+    this.router.navigate(['/orphan-management']);
+  }
+
+  handleImageError(event: any): void {
+    const imgElement = event.target as HTMLImageElement;
+    if (imgElement) {
+      imgElement.src = this.getOrphanPhotoUrl();
+    }
+  }
+
+  // PDF Generation methods
   async generateCardTemplate1(): Promise<void> {
     if (!this.orphan) return;
     
@@ -135,16 +316,5 @@ export class OrphanIdCardComponent implements OnInit {
     if (typeof window !== 'undefined') {
       window.print();
     }
-  }
-
-  handleImageError(event: Event): void {
-    const imgElement = event.target as HTMLImageElement;
-    if (imgElement) {
-      imgElement.src = this.getOrphanPhotoUrl();
-    }
-  }
-
-  goBack(): void {
-    this.router.navigate(['/dashboard']);
   }
 }

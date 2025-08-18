@@ -52,11 +52,11 @@
         <li class="nav-item">
           <button 
             class="nav-link" 
-            [class.active]="activeTab === 'donations'"
-            (click)="setActiveTab('donations')"
+            [class.active]="activeTab === 'gifts'"
+            (click)="setActiveTab('gifts')"
           >
-            <i class="fas fa-donate me-2"></i>
-            Donation Management
+            <i class="fas fa-gift me-2"></i>
+            Gift Types & Funds
           </button>
         </li>
         <li class="nav-item">
@@ -96,34 +96,21 @@
         <app-donor-management></app-donor-management>
       </div>
 
-      <!-- Donation Management Tab -->
-      <div *ngIf="activeTab === 'donations'" class="tab-content-panel">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-donate me-2"></i>
-              Donation Management
-            </h5>
-          </div>
-          <div class="card-body">
-            <p class="text-muted">Donation management functionality will be implemented here.</p>
+      <!-- Gift Types & Funds Tab -->
+      <div *ngIf="activeTab === 'gifts'" class="tab-content-panel">
+        <ng-container *ngIf="giftsComponent">
+          <ng-container *ngComponentOutlet="giftsComponent"></ng-container>
+        </ng-container>
+        <div *ngIf="!giftsComponent" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
           </div>
         </div>
       </div>
 
       <!-- Charity Projects Tab -->
       <div *ngIf="activeTab === 'projects'" class="tab-content-panel">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-project-diagram me-2"></i>
-              Charity Projects
-            </h5>
-          </div>
-          <div class="card-body">
-            <p class="text-muted">Charity projects functionality will be implemented here.</p>
-          </div>
-        </div>
+        <app-charity-projects></app-charity-projects>
       </div>
 
       <!-- Reports Tab -->

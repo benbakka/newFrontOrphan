@@ -1,0 +1,158 @@
+.document-list-container {
+  .documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .document-card {
+    .card {
+      border-radius: 10px;
+      border: 1px solid #e9ecef;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+      }
+    }
+
+    .document-name {
+      font-weight: 600;
+      color: #495057;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .document-type {
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid #dee2e6;
+    }
+
+    .document-details {
+      .detail-row {
+        margin-bottom: 0.25rem;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        small {
+          display: block;
+          line-height: 1.4;
+          word-break: break-word;
+        }
+      }
+    }
+
+    .card-footer {
+      padding: 0.75rem 1rem 1rem;
+    }
+  }
+
+  .empty-state {
+    padding: 3rem 1rem;
+    
+    .fa-3x {
+      font-size: 3rem;
+    }
+  }
+
+  .documents-summary {
+    .card {
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+  }
+
+  .btn {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  .dropdown-toggle::after {
+    display: none;
+  }
+
+  .dropdown-menu {
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e9ecef;
+  }
+
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+    
+    &:hover {
+      background-color: #f8f9fa;
+    }
+    
+    &.text-danger:hover {
+      background-color: #f8d7da;
+      color: #721c24 !important;
+    }
+  }
+
+  .spinner-border {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .alert {
+    border-radius: 8px;
+    border: none;
+  }
+}
+
+// File type specific colors
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-secondary {
+  color: #6c757d !important;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .document-list-container {
+    .documents-grid {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    
+    .document-card {
+      .card-body {
+        padding: 1rem;
+      }
+      
+      .card-footer {
+        padding: 0.5rem 1rem 1rem;
+      }
+    }
+    
+    .empty-state {
+      padding: 2rem 1rem;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .document-list-container {
+    .document-card {
+      .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+      }
+    }
+  }
+}

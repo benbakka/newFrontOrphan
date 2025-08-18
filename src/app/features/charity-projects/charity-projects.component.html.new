@@ -1,0 +1,505 @@
+<!-- Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="fas fa-project-diagram me-2"></i>
+    Charity Projects Management
+  </h4>
+  <div class="d-flex gap-2">
+    <button class="btn btn-success" (click)="createNewProject()">
+      <i class="fas fa-plus"></i> Add New Project
+    </button>
+    <button class="btn btn-primary" (click)="loadProjects()">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
+</div>
+
+<!-- Main Content Layout -->
+<div class="row">
+  <!-- Left Sidebar - Projects List -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+          <i class="fas fa-list me-2"></i>
+          Projects List ({{ totalElements }})
+        </h6>
+      </div>
+      
+      <!-- Search and Filters -->
+      <div class="card-body p-3">
+        <div class="search-section mb-3">
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search projects..."
+              [(ngModel)]="searchTerm"
+              (keyup.enter)="onSearch()">
+            <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="filters mb-3">
+          <select [(ngModel)]="selectedType" (change)="onFilterChange()" class="form-select form-select-sm mb-2">
+            <option value="">All Types</option>
+            <option *ngFor="let type of projectTypes" [value]="type">{{ type }}</option>
+          </select>
+          
+          <select [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="form-select form-select-sm">
+            <option value="">All Statuses</option>
+            <option *ngFor="let status of projectStatuses" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Projects List -->
+      <div class="projects-list p-3" *ngIf="!isLoading">
+        <div 
+          *ngFor="let project of filteredProjects" 
+          class="project-item"
+          [class.selected]="selectedProject?.id === project.id">
+          <div class="project-avatar" (click)="selectProject(project)">
+            <i class="fas fa-project-diagram"></i>
+          </div>
+          <div class="project-info" (click)="selectProject(project)">
+            <div class="project-name">{{ project.name }}</div>
+            <div class="project-type">{{ project.type }}</div>
+            <div class="project-progress">
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill" 
+                  [ngClass]="getProgressBarClass(project.progressPercentage || 0)"
+                  [style.width.%]="project.progressPercentage || 0">
+                </div>
+              </div>
+              <div class="progress-text">{{ project.progressPercentage || 0 }}%</div>
+            </div>
+            <div class="project-amount">
+              {{ formatCurrency(project.collectedAmount || 0) }} / {{ formatCurrency(project.targetAmount || 0) }}
+            </div>
+          </div>
+          <div class="project-actions">
+            <button class="btn btn-sm btn-outline-primary me-1" (click)="editProject(project); $event.stopPropagation();">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" (click)="deleteProject(project); $event.stopPropagation();">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          <div class="project-status">
+            <span class="status-badge" [ngClass]="getStatusClass(project.status)">
+              {{ project.status }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Empty State -->
+        <div *ngIf="projects.length === 0" class="empty-state text-center py-4">
+          <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+          <p class="text-muted">No projects found</p>
+        </div>
+      </div>
+      
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="loading-state text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-2">Loading projects...</p>
+      </div>
+      
+      <!-- Pagination -->
+      <div class="pagination-section mt-3" *ngIf="totalPages > 1">
+        <div class="d-flex justify-content-between align-items-center">
+          <small class="text-muted">
+            Page {{ currentPage + 1 }} of {{ totalPages }}
+          </small>
+          <div class="btn-group btn-group-sm">
+            <button 
+              class="btn btn-outline-primary"
+              [disabled]="currentPage === 0"
+              (click)="onPageChange(currentPage - 1)">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button 
+              class="btn btn-outline-primary"
+              [disabled]="currentPage >= totalPages - 1"
+              (click)="onPageChange(currentPage + 1)">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Main Content - Project Details -->
+  <div class="col-md-8">
+    <div class="card h-100" *ngIf="selectedProject">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{{ selectedProject.name }}</h5>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary" (click)="editProject(selectedProject)">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+          <button class="btn btn-sm btn-outline-danger" (click)="deleteProject(selectedProject)">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </div>
+      </div>
+      
+      <div class="card-body">
+        <!-- Project Details Tabs -->
+        <ul class="nav nav-tabs mb-3">
+          <li class="nav-item">
+            <button 
+              class="nav-link"
+              [class.active]="activeDetailTab === 'info'"
+              (click)="activeDetailTab = 'info'">
+              <i class="fas fa-info-circle me-1"></i>
+              Basic Info
+            </button>
+          </li>
+          <li class="nav-item">
+            <button 
+              class="nav-link"
+              [class.active]="activeDetailTab === 'progress'"
+              (click)="activeDetailTab = 'progress'">
+              <i class="fas fa-chart-line me-1"></i>
+              Progress
+            </button>
+          </li>
+          <li class="nav-item">
+            <button 
+              class="nav-link"
+              [class.active]="activeDetailTab === 'gifts'"
+              (click)="activeDetailTab = 'gifts'">
+              <i class="fas fa-gift me-1"></i>
+              Gifts
+            </button>
+          </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <!-- Basic Info Tab -->
+          <div *ngIf="activeDetailTab === 'info'" class="tab-pane active">
+            <!-- Edit Mode Controls -->
+            <div class="d-flex justify-content-end mb-3" *ngIf="!isEditingInline">
+              <button class="btn btn-sm btn-primary" (click)="startInlineEdit()">
+                <i class="fas fa-edit me-1"></i> Edit Details
+              </button>
+            </div>
+            
+            <!-- Form for editing mode -->
+            <form [formGroup]="projectForm" *ngIf="isEditingInline" class="project-form">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label class="form-label">Project Name *</label>
+                    <input type="text" formControlName="name" class="form-control" 
+                      [class.is-invalid]="projectForm.get('name')?.invalid && projectForm.get('name')?.touched">
+                    <div class="invalid-feedback" *ngIf="projectForm.get('name')?.invalid && projectForm.get('name')?.touched">
+                      Project name is required (minimum 3 characters)
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label">Project Type *</label>
+                    <input type="text" formControlName="type" class="form-control" list="project-types"
+                      [class.is-invalid]="projectForm.get('type')?.invalid && projectForm.get('type')?.touched">
+                    <datalist id="project-types">
+                      <option *ngFor="let type of projectTypes" [value]="type">
+                    </datalist>
+                    <div class="invalid-feedback" *ngIf="projectForm.get('type')?.invalid && projectForm.get('type')?.touched">
+                      Project type is required
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label">Status *</label>
+                    <select formControlName="status" class="form-select"
+                      [class.is-invalid]="projectForm.get('status')?.invalid && projectForm.get('status')?.touched">
+                      <option *ngFor="let status of projectStatuses" [value]="status">{{ status }}</option>
+                    </select>
+                    <div class="invalid-feedback" *ngIf="projectForm.get('status')?.invalid && projectForm.get('status')?.touched">
+                      Status is required
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label class="form-label">Target Amount *</label>
+                    <input type="number" formControlName="targetAmount" class="form-control" min="1" step="0.01"
+                      [class.is-invalid]="projectForm.get('targetAmount')?.invalid && projectForm.get('targetAmount')?.touched">
+                    <div class="invalid-feedback" *ngIf="projectForm.get('targetAmount')?.invalid && projectForm.get('targetAmount')?.touched">
+                      Target amount must be greater than 0
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label">Collected Amount</label>
+                    <input type="number" formControlName="collectedAmount" class="form-control" min="0" step="0.01"
+                      [class.is-invalid]="projectForm.get('collectedAmount')?.invalid && projectForm.get('collectedAmount')?.touched">
+                    <div class="invalid-feedback" *ngIf="projectForm.get('collectedAmount')?.invalid && projectForm.get('collectedAmount')?.touched">
+                      Collected amount cannot be negative
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label">Start Date *</label>
+                    <input type="date" formControlName="startDate" class="form-control"
+                      [class.is-invalid]="projectForm.get('startDate')?.invalid && projectForm.get('startDate')?.touched">
+                    <div class="invalid-feedback" *ngIf="projectForm.get('startDate')?.invalid && projectForm.get('startDate')?.touched">
+                      Start date is required
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" formControlName="endDate" class="form-control">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group mb-3">
+                <label class="form-label">Description</label>
+                <textarea formControlName="description" class="form-control" rows="3" 
+                  placeholder="Enter project description..."></textarea>
+              </div>
+              
+              <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="button" class="btn btn-secondary" (click)="cancelInlineEdit()">
+                  <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" [disabled]="projectForm.invalid || isSubmitting" (click)="saveInlineEdit()">
+                  <span *ngIf="isSubmitting" class="spinner-sm me-1"></span>
+                  <i class="fas fa-save me-1"></i> Save Changes
+                </button>
+              </div>
+            </form>
+            
+            <!-- View mode -->
+            <div *ngIf="!isEditingInline">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="info-group mb-3">
+                    <label class="info-label">Project Type</label>
+                    <div class="info-value">{{ selectedProject.type }}</div>
+                  </div>
+                  <div class="info-group mb-3">
+                    <label class="info-label">Status</label>
+                    <div class="info-value">
+                      <span class="status-badge" [class]="getStatusClass(selectedProject.status)">
+                        {{ selectedProject.status }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="info-group mb-3">
+                    <label class="info-label">Start Date</label>
+                    <div class="info-value">{{ formatDate(selectedProject.startDate) }}</div>
+                  </div>
+                  <div class="info-group mb-3" *ngIf="selectedProject.endDate">
+                    <label class="info-label">End Date</label>
+                    <div class="info-value">{{ formatDate(selectedProject.endDate) }}</div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="info-group mb-3">
+                    <label class="info-label">Target Amount</label>
+                    <div class="info-value text-success fw-bold">{{ formatCurrency(selectedProject.targetAmount) }}</div>
+                  </div>
+                  <div class="info-group mb-3">
+                    <label class="info-label">Collected Amount</label>
+                    <div class="info-value text-primary fw-bold">{{ formatCurrency(selectedProject.collectedAmount) }}</div>
+                  </div>
+                  <div class="info-group mb-3">
+                    <label class="info-label">Remaining Amount</label>
+                    <div class="info-value text-warning fw-bold">
+                      {{ formatCurrency(selectedProject.targetAmount - selectedProject.collectedAmount) }}
+                    </div>
+                  </div>
+                  <div class="info-group mb-3">
+                    <label class="info-label">Created Date</label>
+                    <div class="info-value">{{ selectedProject.createdDate ? formatDate(selectedProject.createdDate) : '-' }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="info-group" *ngIf="selectedProject.description">
+                <label class="info-label">Description</label>
+                <div class="info-value">{{ selectedProject.description }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Progress Tab -->
+          <div *ngIf="activeDetailTab === 'progress'" class="tab-pane active">
+            <div class="progress-overview">
+              <div class="progress-stats row text-center mb-4">
+                <div class="col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-value">{{ selectedProject.progressPercentage }}%</div>
+                    <div class="stat-label">Progress</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-value">{{ formatCurrency(selectedProject.collectedAmount) }}</div>
+                    <div class="stat-label">Collected</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-value">{{ formatCurrency(selectedProject.targetAmount - selectedProject.collectedAmount) }}</div>
+                    <div class="stat-label">Remaining</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="progress-bar-large mb-3">
+                <div 
+                  class="progress-fill"
+                  [class]="getProgressBarClass(selectedProject.progressPercentage || 0)"
+                  [style.width.%]="selectedProject.progressPercentage || 0">
+                </div>
+              </div>
+              
+              <div class="progress-details">
+                <p class="text-muted">
+                  This project has collected <strong>{{ formatCurrency(selectedProject.collectedAmount) }}</strong> 
+                  out of <strong>{{ formatCurrency(selectedProject.targetAmount) }}</strong> target amount.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Gifts Tab -->
+          <div *ngIf="activeDetailTab === 'gifts'" class="tab-pane active">
+            <div class="gifts-section">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                  <i class="fas fa-gift me-2"></i>
+                  Gift History
+                </h5>
+                <button class="btn btn-sm btn-primary" (click)="openAddGiftForm()">
+                  <i class="fas fa-plus me-1"></i>
+                  Add Gift
+                </button>
+              </div>
+              
+              <div *ngIf="isLoadingGifts" class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted mt-2">Loading gifts...</p>
+              </div>
+              
+              <div *ngIf="!isLoadingGifts && projectGifts.length > 0" class="table-responsive">
+                <table class="table table-striped table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Gift Name</th>
+                      <th>Date</th>
+                      <th>Donor</th>
+                      <th>Amount</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let gift of projectGifts">
+                      <td>{{ gift.giftName }}</td>
+                      <td>{{ formatDate(gift.date) }}</td>
+                      <td>{{ gift.donorName }}</td>
+                      <td>{{ formatCurrency(gift.amount) }}</td>
+                      <td>{{ gift.description || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div *ngIf="!isLoadingGifts && projectGifts.length === 0" class="text-center py-4">
+                <i class="fas fa-gift fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No gifts found for this project</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Empty Selection State -->
+    <div class="card h-100" *ngIf="!selectedProject">
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div class="text-center">
+          <i class="fas fa-project-diagram fa-4x text-muted mb-3"></i>
+          <h5 class="text-muted">Select a Project</h5>
+          <p class="text-muted">Choose a project from the list to view its details</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Gift Form Modal -->
+<div class="modal fade" [class.show]="showAddGiftForm" [style.display]="showAddGiftForm ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Gift to {{ selectedProject?.name }}</h5>
+        <button type="button" class="btn-close" (click)="closeAddGiftForm()"></button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="submitNewGift()" #giftForm="ngForm">
+          <div class="mb-3">
+            <label class="form-label">Gift Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="newGiftForm.giftName" name="giftName" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Gift Type *</label>
+            <select class="form-select" [(ngModel)]="newGiftForm.giftTypeId" name="giftTypeId" required>
+              <option [ngValue]="0" disabled>Select Gift Type</option>
+              <option *ngFor="let type of availableGiftTypes" [value]="type.id">{{ type.name }}</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Donor ID *</label>
+            <input type="number" class="form-control" [(ngModel)]="newGiftForm.donorId" name="donorId" required>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Amount *</label>
+              <input type="number" class="form-control" [(ngModel)]="newGiftForm.amount" name="amount" min="0" step="0.01" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Date *</label>
+              <input type="date" class="form-control" [(ngModel)]="newGiftForm.date" name="date" required>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" [(ngModel)]="newGiftForm.description" name="description" rows="3"></textarea>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeAddGiftForm()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="!giftForm.form.valid || isSubmitting">
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+              Add Gift
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showAddGiftForm"></div>

@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Donor } from '../models/donor.model';
-import { DonorDetailDTO } from '../models/gift.model';
+import { Donor, DonorDetailDTO, DonorListDTO } from '../models/donor.model';
+import { OrphanListDTO } from '../models/orphan-list.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -64,5 +64,21 @@ export class DonorService {
   // Get donor details with gift information
   getDonorDetails(donorId: number): Observable<DonorDetailDTO> {
     return this.http.get<DonorDetailDTO>(`${this.baseUrl}/${donorId}/details`, { headers: this.getAuthHeaders() });
+  }
+
+  // Get available orphans for sponsorship (not currently sponsored)
+  getAvailableOrphansForSponsorship(): Observable<OrphanListDTO[]> {
+    return this.http.get<OrphanListDTO[]>(`${this.baseUrl}/available-orphans`, { headers: this.getAuthHeaders() });
+  }
+
+  // Create donor with multiple orphan sponsorships
+  createDonorWithSponsorships(donor: Donor, orphanIds: number[], sponsorshipType: string, startDate: string): Observable<DonorDetailDTO> {
+    const payload = {
+      donor,
+      orphanIds,
+      sponsorshipType,
+      startDate
+    };
+    return this.http.post<DonorDetailDTO>(`${this.baseUrl}/with-sponsorships`, payload, { headers: this.getAuthHeaders() });
   }
 }

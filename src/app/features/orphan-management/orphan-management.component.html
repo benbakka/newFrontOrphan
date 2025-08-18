@@ -48,7 +48,7 @@
             Orphans List ({{ filteredOrphans.length }})
           </h6>
           <!-- Search -->
-          <div class="input-group">
+          <div class="input-group mb-3">
             <span class="input-group-text">
               <i class="fas fa-search"></i>
             </span>
@@ -67,6 +67,18 @@
               title="Clear search"
             >
               <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <!-- Advanced Search Button -->
+          <div class="d-flex justify-content-end mb-2">
+            <button 
+              class="btn btn-outline-primary btn-sm"
+              type="button"
+              (click)="openAdvancedSearchModal()"
+              title="Advanced Search"
+            >
+              <i class="fas fa-filter me-1"></i>
+              Advanced Search
             </button>
           </div>
         </div>
@@ -107,21 +119,25 @@
                   <small class="text-muted d-block">
                     Age: {{ getAge(orphan.dob) }} years • {{ orphan.gender }}
                   </small>
-                  <!-- Kafala Information -->
-                  <div *ngIf="orphan.hasKafala" class="mt-1">
+                  <!-- Sponsorship Status -->
+                  <div *ngIf="orphan.isSponsored" class="mt-1">
                     <span class="badge bg-success me-1">
-                      <i class="fas fa-heart me-1"></i>Kafala: {{ formatCurrency(orphan.kafalaAmount || 0) }}
+                      <i class="fas fa-heart me-1"></i>Sponsored
                     </span>
-                    <span class="badge bg-info">
-                      {{ orphan.kafalaFrequency }}
-                    </span>
-                    <small class="text-muted d-block mt-1">
-                      <i class="fas fa-user me-1"></i>Donor: {{ orphan.donorName }}
+                    <small class="text-muted d-block mt-1" *ngIf="orphan.sponsorships && orphan.sponsorships.length > 0">
+                      <i class="fas fa-user me-1"></i>Sponsors: {{ orphan.sponsorships.length }}
                     </small>
                   </div>
-                  <div *ngIf="!orphan.hasKafala" class="mt-1">
+                  <div *ngIf="!orphan.isSponsored" class="mt-1">
                     <span class="badge bg-warning text-dark">
-                      <i class="fas fa-exclamation-triangle me-1"></i>No Kafala
+                      <i class="fas fa-exclamation-triangle me-1"></i>Not Sponsored
+                    </span>
+                  </div>
+                  
+                  <!-- Legacy Kafala Information (can be removed once migration is complete) -->
+                  <div *ngIf="orphan.hasKafala && orphan.isSponsored === undefined" class="mt-1">
+                    <span class="badge bg-info me-1">
+                      <i class="fas fa-info-circle me-1"></i>Legacy Kafala
                     </span>
                   </div>
                 </div>
@@ -242,6 +258,17 @@
                 >
                   <i class="fas fa-graduation-cap me-2"></i>
                   Education
+                </button>
+              </li>
+              <li class="nav-item">
+                <button 
+                  class="nav-link"
+                  [class.active]="activeSection === 'sponsorship'"
+                  (click)="setActiveSection('sponsorship')"
+                  type="button"
+                >
+                  <i class="fas fa-handshake me-2"></i>
+                  Sponsorship Info
                 </button>
               </li>
               <li class="nav-item">
@@ -438,6 +465,35 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Documents Section -->
+              <div class="row mt-4" *ngIf="selectedOrphan?.id">
+                <div class="col-12">
+                  <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                      <!-- Document Upload Component -->
+                      <app-document-upload
+                        [orphanId]="selectedOrphan?.id!"
+                        [showUploadForm]="showDocumentUpload"
+                        [refreshTrigger]="documentRefreshTrigger"
+                        (documentUploaded)="onDocumentUploaded($event)"
+                        (documentDeleted)="onDocumentDeleted($event)"
+                        (uploadFormToggled)="showDocumentUpload = $event">
+                      </app-document-upload>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Documents Info for New Orphans -->
+              <div class="row mt-4" *ngIf="!selectedOrphan?.id">
+                <div class="col-12">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Document Upload:</strong> Save the orphan first to enable document upload functionality.
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Family Information Section -->
@@ -575,6 +631,118 @@
               </div>
             </div>
 
+            <!-- Sponsorship Information Section -->
+            <div *ngIf="activeSection === 'sponsorship'" class="section-content">
+              <div class="row">
+                <!-- Add New Donor Button -->
+                <div class="col-12 mb-4">
+                  <button 
+                    type="button" 
+                    class="btn me-2"
+                    [ngClass]="{'btn-success': !isOrphanSponsored(), 'btn-outline-success': isOrphanSponsored()}"
+                    (click)="openAddDonorForm()"
+                    [disabled]="isOrphanSponsored()"
+                  >
+                    <i class="fas fa-user-plus me-2"></i>
+                    <span *ngIf="!isOrphanSponsored()">Add First Sponsor</span>
+                    <span *ngIf="isOrphanSponsored()">Add Additional Sponsor</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-primary"
+                    (click)="openSelectDonorForm()"
+                    [disabled]="isOrphanSponsored()"
+                  >
+                    <i class="fas fa-search me-2"></i>
+                    Select Existing Donor
+                  </button>
+                </div>
+
+                <!-- Sponsorships List -->
+                <div class="col-12" *ngIf="selectedOrphan && selectedOrphan.sponsorships && selectedOrphan.sponsorships.length > 0">
+                  <div class="card">
+                    <div class="card-header">
+                      <h6 class="mb-0">
+                        <i class="fas fa-handshake me-2"></i>
+                        Sponsorships
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th>Donor</th>
+                              <th>Type</th>
+                              <th>Amount</th>
+                              <th>Start Date</th>
+                              <th>Status</th>
+                              <th>Gifts Count</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let sponsorship of selectedOrphan.sponsorships">
+                              <td>{{ sponsorship.donorName }}</td>
+                              <td>
+                                <span class="badge" [ngClass]="{'bg-primary': sponsorship.sponsorshipType === 'MONTHLY', 'bg-success': sponsorship.sponsorshipType === 'YEARLY'}">
+                                  {{ sponsorship.sponsorshipType === 'MONTHLY' ? 'Monthly' : 'Annual' }}
+                                </span>
+                              </td>
+                              <td>${{ sponsorship.amount | number:'1.2-2' }}</td>
+                              <td>{{ formatDate(sponsorship.startDate) }}</td>
+                              <td>
+                                <span class="badge" [ngClass]="{
+                                  'bg-success': getSponsorshipStatus(sponsorship) === 'ACTIVE', 
+                                  'bg-secondary': getSponsorshipStatus(sponsorship) === 'EXPIRED',
+                                  'bg-danger': getSponsorshipStatus(sponsorship) === 'CANCELLED'
+                                }">
+                                  {{ getSponsorshipStatus(sponsorship) }}
+                                </span>
+                              </td>
+                              <td>{{ sponsorship.gifts?.length || 0 }}</td>
+                              <td>
+                                <button 
+                                  *ngIf="getSponsorshipStatus(sponsorship) === 'ACTIVE'"
+                                  type="button" 
+                                  class="btn btn-sm btn-outline-danger"
+                                  (click)="cancelSponsorship(sponsorship)"
+                                  title="Cancel Sponsorship"
+                                >
+                                  <i class="fas fa-times"></i> Cancel
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sponsorship Status -->
+                <div class="col-12 mb-4" *ngIf="selectedOrphan">
+                  <div class="alert" [ngClass]="{'alert-success': isOrphanSponsored(), 'alert-warning': !isOrphanSponsored()}">
+                    <div class="d-flex align-items-center">
+                      <i class="fas" [ngClass]="{'fa-check-circle': isOrphanSponsored(), 'fa-exclamation-circle': !isOrphanSponsored()}" style="font-size: 1.5rem; margin-right: 10px;"></i>
+                      <div>
+                        <h5 class="mb-0">{{ isOrphanSponsored() ? 'This orphan is currently sponsored' : 'This orphan is not currently sponsored' }}</h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- No Sponsorships Message -->
+                <div class="col-12" *ngIf="!selectedOrphan || !selectedOrphan.sponsorships || selectedOrphan.sponsorships.length === 0">
+                  <div class="text-center text-muted py-5">
+                    <i class="fas fa-handshake fa-3x mb-3"></i>
+                    <h5>No sponsorships recorded yet</h5>
+                    <p>Click "Add New Donor" to create the first sponsorship for this orphan.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Gifts Section -->
             <div *ngIf="activeSection === 'gifts'" class="section-content">
               <div class="row">
@@ -583,126 +751,86 @@
                   <button 
                     type="button" 
                     class="btn btn-primary me-2"
-                    (click)="openAddGiftModalFromDetail()"
+                    (click)="openAddGiftForm()"
+                    [disabled]="!selectedOrphan"
                   >
                     <i class="fas fa-plus me-2"></i>
                     Add New Gift
                   </button>
                   <button 
                     type="button" 
-                    class="btn btn-outline-info me-2"
-                    (click)="openGiftHistoryModalFromDetail()"
-                  >
-                    <i class="fas fa-history me-2"></i>
-                    View Gift History
-                  </button>
-                  <button 
-                    type="button" 
                     class="btn btn-outline-secondary"
-                    (click)="loadOrphanGiftsForDetail()"
+                    (click)="loadSponsorships()"
                   >
                     <i class="fas fa-refresh me-2"></i>
                     Refresh
                   </button>
                 </div>
 
-                <!-- Current Kafala Info -->
-                <div class="col-12 mb-4" *ngIf="selectedOrphan">
-                  <div class="card border-primary">
-                    <div class="card-header bg-primary text-white">
-                      <h6 class="mb-0">
-                        <i class="fas fa-heart me-2"></i>
-                        Current Kafala Status
-                      </h6>
-                    </div>
-                    <div class="card-body">
-                      <div *ngIf="selectedOrphan.hasKafala; else noKafala">
-                        <div class="row">
-                          <div class="col-md-6">
-                            <strong>Amount:</strong> {{ formatCurrency(selectedOrphan.kafalaAmount || 0) }}
-                          </div>
-                          <div class="col-md-6">
-                            <strong>Frequency:</strong> {{ selectedOrphan.kafalaFrequency }}
-                          </div>
-                          <div class="col-md-6 mt-2">
-                            <strong>Donor:</strong> {{ selectedOrphan.donorName }}
-                          </div>
-                          <div class="col-md-6 mt-2">
-                            <strong>Status:</strong> 
-                            <span class="badge bg-success">Active</span>
-                          </div>
-                        </div>
-                      </div>
-                      <ng-template #noKafala>
-                        <div class="text-center text-muted">
-                          <i class="fas fa-heart-broken fa-2x mb-2"></i>
-                          <p class="mb-0">This orphan does not have an active kafala sponsorship.</p>
-                          <small>Consider adding a kafala gift to provide ongoing support.</small>
-                        </div>
-                      </ng-template>
-                    </div>
+                <!-- No Sponsorships Warning -->
+                <div class="col-12 mb-4" *ngIf="!selectedOrphan || !selectedOrphan.sponsorships || selectedOrphan.sponsorships.length === 0">
+                  <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong>
+                    Cannot add gifts without sponsorship. Please add a sponsorship first from the "Sponsorship Info" section.
                   </div>
                 </div>
 
-                <!-- Recent Gifts Summary -->
-                <div class="col-12">
-                  <div class="card">
+                <!-- Sponsorships with Gifts -->
+                <div class="col-12" *ngIf="selectedOrphan && selectedOrphan.sponsorships && selectedOrphan.sponsorships.length > 0">
+                  <div class="card mb-4" *ngFor="let sponsorship of selectedOrphan.sponsorships">
                     <div class="card-header">
-                      <h6 class="mb-0">
-                        <i class="fas fa-gift me-2"></i>
-                        Recent Gifts Summary
-                      </h6>
+                      <div class="row align-items-center">
+                        <div class="col">
+                          <h6 class="mb-0">
+                            <i class="fas fa-handshake me-2"></i>
+                            {{ sponsorship.donorName }}'s Sponsorship
+                          </h6>
+                          <small class="text-muted">
+                            {{ sponsorship.sponsorshipType === 'MONTHLY' ? 'Monthly' : 'Annual' }} - 
+                            {{ formatDate(sponsorship.startDate) }}
+                          </small>
+                        </div>
+                        <div class="col-auto">
+                          <span class="badge" [ngClass]="{'bg-success': getSponsorshipStatus(sponsorship) === 'Active', 'bg-secondary': getSponsorshipStatus(sponsorship) === 'Expired'}">
+                            {{ getSponsorshipStatus(sponsorship) }}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <div class="card-body">
-                      <div *ngIf="isLoadingGifts" class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                          <span class="visually-hidden">Loading gifts...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Loading gifts...</p>
-                      </div>
-                      <div *ngIf="!isLoadingGifts && orphanGifts && orphanGifts.length > 0; else noGifts">
+                      <!-- Gifts for this sponsorship -->
+                      <div *ngIf="sponsorship.gifts && sponsorship.gifts.length > 0; else noGiftsForSponsorship">
                         <div class="table-responsive">
                           <table class="table table-sm">
                             <thead>
                               <tr>
                                 <th>Date</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Donor</th>
+                                <th>Gift Name</th>
+                                <th>Value</th>
+                                <th>Description</th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr *ngFor="let gift of orphanGifts.slice(0, 5)">
-                                <td>{{ formatDate(gift.date) }}</td>
-                                <td>
-                                  <span class="badge" [ngClass]="{
-                                    'bg-success': gift.giftType === 'KAFALA',
-                                    'bg-primary': gift.giftType === 'DONATION',
-                                    'bg-info': gift.giftType === 'SPONSORSHIP',
-                                    'bg-warning': gift.giftType === 'EMERGENCY_AID'
-                                  }">{{ gift.giftType }}</span>
-                                </td>
-                                <td>{{ formatCurrency(gift.amount) }}</td>
-                                <td>{{ gift.donorName }}</td>
+                              <tr *ngFor="let gift of sponsorship.gifts">
+                                <td>{{ formatDate(gift.giftDate) }}</td>
+                                <td>{{ gift.giftName }}</td>
+                                <td>{{ formatCurrency(gift.giftValue) }}</td>
+                                <td>{{ gift.description || 'No description' }}</td>
                               </tr>
                             </tbody>
                           </table>
                         </div>
-                        <div class="text-center mt-3" *ngIf="orphanGifts.length > 5">
-                          <button 
-                            type="button" 
-                            class="btn btn-outline-primary btn-sm"
-                            (click)="openGiftHistoryModalFromDetail()"
-                          >
-                            View All {{ orphanGifts.length }} Gifts
-                          </button>
+                        <div class="text-end">
+                          <small class="text-muted">
+                            Total Gifts: {{ sponsorship.gifts.length }}
+                          </small>
                         </div>
                       </div>
-                      <ng-template #noGifts>
-                        <div *ngIf="!isLoadingGifts" class="text-center text-muted py-4">
+                      <ng-template #noGiftsForSponsorship>
+                        <div class="text-center text-muted py-3">
                           <i class="fas fa-gift fa-2x mb-2"></i>
-                          <p class="mb-0">No gifts recorded yet.</p>
-                          <small>Click "Add New Gift" to record the first donation.</small>
+                          <p class="mb-0">No gifts for this sponsorship yet</p>
                         </div>
                       </ng-template>
                     </div>
@@ -915,97 +1043,157 @@
       <form [formGroup]="giftForm" (ngSubmit)="submitGift()">
         <div class="modal-body">
           <div class="row">
+            <!-- Donor Selection -->
             <div class="col-md-6">
               <div class="mb-3">
                 <label for="donorId" class="form-label">Donor *</label>
-                <select class="form-select" id="donorId" formControlName="donorId" required>
+                <select class="form-select" id="donorId" formControlName="donorId" [class.is-invalid]="giftForm.get('donorId')?.invalid && giftForm.get('donorId')?.touched">
                   <option value="">Select a donor</option>
                   <option *ngFor="let donor of donors" [value]="donor.id">
                     {{ donor.name }} - {{ donor.email }}
                   </option>
                 </select>
-                <div *ngIf="giftForm.get('donorId')?.invalid && giftForm.get('donorId')?.touched" class="text-danger small">
+                <div class="invalid-feedback">
                   Please select a donor
                 </div>
               </div>
             </div>
+            
+            <!-- Gift Type Selection -->
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="amount" class="form-label">Amount *</label>
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input type="number" class="form-control" id="amount" formControlName="amount" 
-                         placeholder="0.00" step="0.01" min="0.01" required>
+                <label for="giftTypeId" class="form-label">Gift Type *</label>
+                <select class="form-select" id="giftTypeId" formControlName="giftTypeId" (change)="onGiftTypeChange()" [class.is-invalid]="giftForm.get('giftTypeId')?.invalid && giftForm.get('giftTypeId')?.touched">
+                  <option [ngValue]="null">Select Gift Type</option>
+                  <option *ngFor="let type of giftTypes" [ngValue]="type.id">
+                    {{ type.name }} (Balance: {{ formatCurrency(type.balance || 0) }})
+                  </option>
+                  <option value="custom">Create Custom Type</option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select a gift type
                 </div>
-                <div *ngIf="giftForm.get('amount')?.invalid && giftForm.get('amount')?.touched" class="text-danger small">
-                  Please enter a valid amount
+              </div>
+            </div>
+          </div>
+          
+          <!-- Custom Gift Type Name -->
+          <div class="row" *ngIf="giftForm.get('giftTypeId')?.value === 'custom'">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="customGiftTypeName" class="form-label">Custom Gift Type Name *</label>
+                <input type="text" class="form-control" id="customGiftTypeName" formControlName="customGiftTypeName" placeholder="Enter gift type name" [class.is-invalid]="giftForm.get('customGiftTypeName')?.invalid && giftForm.get('customGiftTypeName')?.touched">
+                <div class="invalid-feedback">
+                  Please enter a name for the custom gift type
                 </div>
               </div>
             </div>
           </div>
           
           <div class="row">
+            <!-- Amount -->
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="giftType" class="form-label">Gift Type *</label>
-                <select class="form-select" id="giftType" formControlName="giftType" (change)="onGiftTypeChange()" required>
-                  <option [value]="GiftType.DONATION">Donation</option>
-                  <option [value]="GiftType.KAFALA">Kafala (Sponsorship)</option>
-                  <option [value]="GiftType.SPONSORSHIP">Sponsorship</option>
-                  <option [value]="GiftType.EMERGENCY_AID">Emergency Aid</option>
-                </select>
+                <label for="amount" class="form-label">Amount *</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" id="amount" formControlName="amount" min="0.01" step="0.01" placeholder="0.00" [class.is-invalid]="giftForm.get('amount')?.invalid && giftForm.get('amount')?.touched">
+                </div>
+                <div class="invalid-feedback">
+                  Please enter a valid amount
+                </div>
               </div>
             </div>
+            
+            <!-- Date -->
             <div class="col-md-6">
               <div class="mb-3">
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Date *</mat-label>
-                  <input 
-                    matInput 
-                    [matDatepicker]="giftDatePicker" 
-                    formControlName="date"
-                    placeholder="MM/dd/yyyy"
-                    readonly
-                    required
-                  >
-                  <mat-datepicker-toggle matIconSuffix [for]="giftDatePicker"></mat-datepicker-toggle>
-                  <mat-datepicker #giftDatePicker></mat-datepicker>
-                  <mat-error *ngIf="giftForm.get('date')?.hasError('required')">Please select a date</mat-error>
-                </mat-form-field>
-              </div>
-            </div>
-          </div>
-          
-          <div class="row" *ngIf="giftForm.get('giftType')?.value === GiftType.KAFALA">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="kafalaFrequency" class="form-label">Kafala Frequency *</label>
-                <select class="form-select" id="kafalaFrequency" formControlName="kafalaFrequency">
-                  <option value="">Select frequency</option>
-                  <option [value]="KafalaFrequency.MONTHLY">Monthly</option>
-                  <option [value]="KafalaFrequency.YEARLY">Yearly</option>
-                </select>
-                <div *ngIf="giftForm.get('kafalaFrequency')?.invalid && giftForm.get('kafalaFrequency')?.touched" class="text-danger small">
-                  Please select kafala frequency
+                <label for="date" class="form-label">Gift Date *</label>
+                <input type="date" class="form-control" id="date" formControlName="date" [class.is-invalid]="giftForm.get('date')?.invalid && giftForm.get('date')?.touched">
+                <div class="invalid-feedback">
+                  Please select a date
                 </div>
               </div>
             </div>
           </div>
           
+          <!-- Beneficiary Type -->
+          <div class="mb-3">
+            <label class="form-label">Who benefits from this gift? *</label>
+            <div class="row">
+              <!-- <div class="col-md-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" formControlName="beneficiaryType" [value]="BeneficiaryType.CHARITY" id="beneficiaryCharity" (change)="onBeneficiaryTypeChange(BeneficiaryType.CHARITY)">
+                  <label class="form-check-label" for="beneficiaryCharity">
+                    <i class="fas fa-heart me-2 text-primary"></i>
+                    General Charity Fund
+                  </label>
+                </div>
+              </div> -->
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" formControlName="beneficiaryType" [value]="BeneficiaryType.ORPHAN" id="beneficiaryOrphan" (change)="onBeneficiaryTypeChange(BeneficiaryType.ORPHAN)">
+                  <label class="form-check-label" for="beneficiaryOrphan">
+                    <i class="fas fa-child me-2 text-success"></i>
+                    This Orphan
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" formControlName="beneficiaryType" [value]="BeneficiaryType.PROJECT" id="beneficiaryProject" (change)="onBeneficiaryTypeChange(BeneficiaryType.PROJECT)">
+                  <label class="form-check-label" for="beneficiaryProject">
+                    <i class="fas fa-project-diagram me-2 text-info"></i>
+                    Charity Project
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Project Selection -->
+          <div class="row" *ngIf="beneficiaryType === BeneficiaryType.PROJECT">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="projectId" class="form-label">Select Project *</label>
+                <select class="form-select" id="projectId" formControlName="projectId" [class.is-invalid]="giftForm.get('projectId')?.invalid && giftForm.get('projectId')?.touched">
+                  <option [ngValue]="null">Choose a project</option>
+                  <option *ngFor="let project of availableProjects" [ngValue]="project.id">
+                    {{ project.name }} (Target: {{ formatCurrency(project.targetAmount) }})
+                  </option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select a project
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Description -->
           <div class="mb-3">
             <label for="description" class="form-label">Description</label>
-            <textarea class="form-control" id="description" formControlName="description" 
-                      rows="3" placeholder="Optional description or notes..."></textarea>
+            <textarea class="form-control" id="description" formControlName="description" rows="2" placeholder="Optional notes about this gift..."></textarea>
+          </div>
+          
+          <!-- Error/Success Messages -->
+          <div *ngIf="giftError" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ giftError }}
+          </div>
+          
+          <div *ngIf="giftSuccess" class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>
+            {{ giftSuccess }}
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeGiftModal()" [disabled]="isAddingGift">
+          <button type="button" class="btn btn-secondary" (click)="closeGiftModal()" [disabled]="isSubmittingGift">
             Cancel
           </button>
-          <button type="submit" class="btn btn-primary" [disabled]="giftForm.invalid || isAddingGift">
-            <span *ngIf="isAddingGift" class="spinner-border spinner-border-sm me-2" role="status"></span>
-            <i *ngIf="!isAddingGift" class="fas fa-plus me-2"></i>
-            {{ isAddingGift ? 'Adding...' : 'Add Gift' }}
+          <button type="submit" class="btn btn-primary" [disabled]="giftForm.invalid || isSubmittingGift">
+            <span *ngIf="isSubmittingGift" class="spinner-border spinner-border-sm me-2" role="status"></span>
+            <i *ngIf="!isSubmittingGift" class="fas fa-plus me-2"></i>
+            {{ isSubmittingGift ? 'Adding Gift...' : 'Add Gift' }}
           </button>
         </div>
       </form>
@@ -1053,7 +1241,7 @@
               </thead>
               <tbody>
                 <tr *ngFor="let gift of modalGifts">
-                  <td>{{ formatDate(gift.date) }}</td>
+                  <td>{{ formatDate(gift.giftDate) }}</td>
                   <td>{{ gift.donorName }}</td>
                   <td>{{ formatCurrency(gift.amount) }}</td>
                   <td>
@@ -1067,10 +1255,10 @@
                     </span>
                   </td>
                   <td>
-                    <span *ngIf="gift.kafalaFrequency" class="badge bg-secondary">
-                      {{ gift.kafalaFrequency }}
+                    <span *ngIf="gift.sponsorshipId" class="badge bg-secondary">
+                      Sponsored
                     </span>
-                    <span *ngIf="!gift.kafalaFrequency">-</span>
+                    <span *ngIf="!gift.sponsorshipId">-</span>
                   </td>
                   <td>{{ gift.description || '-' }}</td>
                   <td>
@@ -1099,5 +1287,512 @@
   </div>
 </div>
 
+<!-- Sponsorship-Based Gift Modal -->
+<div class="modal fade show" *ngIf="isSponsorshipGiftModalVisible" style="display: block;" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-gift me-2"></i>
+          Add Gift for {{ selectedOrphan?.firstName }} {{ selectedOrphan?.lastName }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeSponsorshipGiftModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="sponsorshipGiftForm" (ngSubmit)="submitSponsorshipGift()">
+          <div class="row">
+            <!-- Gift Type Selection -->
+            <div class="col-12 mb-3">
+              <label class="form-label">Gift Type *</label>
+              <select class="form-select" formControlName="giftTypeId" required (change)="onGiftTypeChange()">
+                <option value="">Select a gift type</option>
+                <option *ngFor="let giftType of giftTypes" [value]="giftType.id">
+                  {{ giftType.name }} (Balance: ${{ giftType.balance | number:'1.2-2' }})
+                </option>
+                <option value="custom">+ Create New Gift Type</option>
+              </select>
+              <div class="invalid-feedback" *ngIf="sponsorshipGiftForm.get('giftTypeId')?.invalid && sponsorshipGiftForm.get('giftTypeId')?.touched">
+                Please select a gift type
+              </div>
+            </div>
+
+            <!-- Custom Gift Type Name -->
+            <div class="col-12 mb-3" *ngIf="sponsorshipGiftForm.get('giftTypeId')?.value === 'custom'">
+              <label class="form-label">New Gift Type Name *</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="customGiftTypeName"
+                placeholder="Enter new gift type name"
+              >
+              <div class="invalid-feedback" *ngIf="sponsorshipGiftForm.get('customGiftTypeName')?.invalid && sponsorshipGiftForm.get('customGiftTypeName')?.touched">
+                Gift type name is required
+              </div>
+            </div>
+
+            <!-- Gift Name -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Name *</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="giftName"
+                placeholder="Enter gift name"
+                required
+              >
+              <div class="invalid-feedback" *ngIf="sponsorshipGiftForm.get('giftName')?.invalid && sponsorshipGiftForm.get('giftName')?.touched">
+                Gift name is required
+              </div>
+            </div>
+
+            <!-- Gift Value -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Value *</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  formControlName="giftValue"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  required
+                >
+              </div>
+              <div class="invalid-feedback" *ngIf="sponsorshipGiftForm.get('giftValue')?.invalid && sponsorshipGiftForm.get('giftValue')?.touched">
+                Gift value is required and must be greater than 0
+              </div>
+            </div>
+
+            <!-- Gift Date -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Date *</label>
+              <input 
+                type="date" 
+                class="form-control" 
+                formControlName="giftDate"
+                required
+              >
+              <div class="invalid-feedback" *ngIf="sponsorshipGiftForm.get('giftDate')?.invalid && sponsorshipGiftForm.get('giftDate')?.touched">
+                Gift date is required
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="col-12 mb-3">
+              <label class="form-label">Description</label>
+              <textarea 
+                class="form-control" 
+                formControlName="description"
+                rows="3"
+                placeholder="Optional description or notes about the gift"
+              ></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeSponsorshipGiftModal()">
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          (click)="submitSponsorshipGift()"
+          [disabled]="sponsorshipGiftForm.invalid || isSubmittingGift"
+        >
+          <i class="fas fa-spinner fa-spin me-2" *ngIf="isSubmittingGift"></i>
+          <i class="fas fa-plus me-2" *ngIf="!isSubmittingGift"></i>
+          {{ isSubmittingGift ? 'Adding...' : 'Add Gift' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add New Donor Modal -->
+<div class="modal fade" [class.show]="isAddDonorModalVisible" [style.display]="isAddDonorModalVisible ? 'block' : 'none'" *ngIf="isAddDonorModalVisible">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-plus me-2"></i>
+          Add New Donor & Create Sponsorship
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAddDonorModal()"></button>
+      </div>
+      <form (ngSubmit)="createDonorWithSponsorship()">
+        <div class="modal-body">
+          <!-- Donor Information -->
+          <div class="card mb-4" [formGroup]="donorForm">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-user me-2"></i>
+                Donor Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Donor ID *</label>
+                  <input type="text" class="form-control" formControlName="donorId" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Full Name *</label>
+                  <input type="text" class="form-control" formControlName="name" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" formControlName="email">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Phone Number</label>
+                  <input type="text" class="form-control" formControlName="phone">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Address</label>
+                  <input type="text" class="form-control" formControlName="address">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">City</label>
+                  <input type="text" class="form-control" formControlName="city">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">State</label>
+                  <input type="text" class="form-control" formControlName="state">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">ZIP Code</label>
+                  <input type="text" class="form-control" formControlName="zip">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Country</label>
+                  <input type="text" class="form-control" formControlName="country">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Company</label>
+                  <input type="text" class="form-control" formControlName="company">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sponsorship Information -->
+          <div class="card" [formGroup]="sponsorshipForm">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-handshake me-2"></i>
+                Sponsorship Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Sponsorship Type *</label>
+                  <select class="form-select" formControlName="sponsorshipType" required>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="YEARLY">Yearly</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Start Date *</label>
+                  <input type="date" class="form-control" formControlName="startDate" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">End Date (Optional)</label>
+                  <input type="date" class="form-control" formControlName="endDate">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Gift Value *</label>
+                  <input type="number" class="form-control" formControlName="giftValue" min="0" step="0.01" required>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeAddDonorModal()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="donorForm.invalid || sponsorshipForm.invalid || isCreatingSponsorshipWithNewDonor">
+            <span *ngIf="isCreatingSponsorshipWithNewDonor" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="fas fa-save me-2" *ngIf="!isCreatingSponsorshipWithNewDonor"></i>
+            Create Donor & Sponsorship
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Select Existing Donor Modal -->
+<div class="modal fade" [class.show]="isSelectDonorModalVisible" [style.display]="isSelectDonorModalVisible ? 'block' : 'none'" *ngIf="isSelectDonorModalVisible">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-search me-2"></i>
+          Select Existing Donor & Create Sponsorship
+        </h5>
+        <button type="button" class="btn-close" (click)="closeSelectDonorModal()"></button>
+      </div>
+      <form [formGroup]="sponsorshipForm" (ngSubmit)="createSponsorshipWithExistingDonor()">
+        <div class="modal-body">
+          <!-- Donor Selection -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-user me-2"></i>
+                Select Donor
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">Donor *</label>
+                <select class="form-select" formControlName="donorId" required>
+                  <option value="">Select a donor...</option>
+                  <option *ngFor="let donor of donors" [value]="donor.id">
+                    {{ donor.name }} ({{ donor.donorId }})
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sponsorship Information -->
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-handshake me-2"></i>
+                Sponsorship Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Sponsorship Type *</label>
+                  <select class="form-select" formControlName="sponsorshipType" required>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="YEARLY">Yearly</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Start Date *</label>
+                  <input type="date" class="form-control" formControlName="startDate" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">End Date (Optional)</label>
+                  <input type="date" class="form-control" formControlName="endDate">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Gift Value *</label>
+                  <input type="number" class="form-control" formControlName="giftValue" min="0" step="0.01" required>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeSelectDonorModal()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="sponsorshipForm.invalid || isCreatingSponsorshipWithExistingDonor">
+            <span *ngIf="isCreatingSponsorshipWithExistingDonor" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="fas fa-save me-2" *ngIf="!isCreatingSponsorshipWithExistingDonor"></i>
+            Create Sponsorship
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Advanced Search Modal -->
+<div class="modal fade" [class.show]="isAdvancedSearchModalVisible" [style.display]="isAdvancedSearchModalVisible ? 'block' : 'none'" *ngIf="isAdvancedSearchModalVisible">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-filter me-2"></i>
+          Advanced Search
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAdvancedSearchModal()"></button>
+      </div>
+      
+      <form [formGroup]="advancedSearchForm" (ngSubmit)="applyAdvancedSearch()">
+        <div class="modal-body">
+          <div class="row">
+            <!-- Section 1 - Personal Info -->
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header">
+                  <h6 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Personal Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-12 mb-3">
+                      <label class="form-label">Name</label>
+                      <input type="text" class="form-control" formControlName="name" placeholder="First name or last name">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Gender</label>
+                      <select class="form-select" formControlName="gender">
+                        <option value="">Any</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label">Age From</label>
+                      <input type="number" class="form-control" formControlName="ageFrom" min="0" max="18" placeholder="0">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label">Age To</label>
+                      <input type="number" class="form-control" formControlName="ageTo" min="0" max="18" placeholder="18">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Country</label>
+                      <input type="text" class="form-control" formControlName="country" placeholder="e.g., Morocco">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">City</label>
+                      <input type="text" class="form-control" formControlName="city" placeholder="e.g., Casablanca">
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label class="form-label">Place of Birth</label>
+                      <input type="text" class="form-control" formControlName="placeOfBirth" placeholder="Birth location">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2 - Sponsorship Info -->
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header">
+                  <h6 class="mb-0">
+                    <i class="fas fa-handshake me-2"></i>
+                    Sponsorship Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Is Sponsored</label>
+                      <select class="form-select" formControlName="isSponsored">
+                        <option value="">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Sponsorship Type</label>
+                      <select class="form-select" formControlName="sponsorshipType">
+                        <option value="">Any</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="YEARLY">Yearly</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Sponsorship Start Date</label>
+                      <input type="date" class="form-control" formControlName="sponsorshipStartDate">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Sponsorship End Date</label>
+                      <input type="date" class="form-control" formControlName="sponsorshipEndDate">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 3 - Other Info -->
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Other Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label">Health Status</label>
+                      <select class="form-select" formControlName="healthStatus">
+                        <option value="">Any</option>
+                        <option value="Healthy">Healthy</option>
+                        <option value="Chronic Illness">Chronic Illness</option>
+                        <option value="Disability">Disability</option>
+                        <option value="Special Needs">Special Needs</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label">Education Level</label>
+                      <select class="form-select" formControlName="educationLevel">
+                        <option value="">Any</option>
+                        <option value="Preschool">Preschool</option>
+                        <option value="Elementary">Elementary</option>
+                        <option value="Middle School">Middle School</option>
+                        <option value="High School">High School</option>
+                        <option value="University">University</option>
+                        <option value="Not Enrolled">Not Enrolled</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label">Project Participation</label>
+                      <select class="form-select" formControlName="projectParticipation">
+                        <option value="">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label">Orphan ID</label>
+                      <input type="text" class="form-control" formControlName="orphanId" placeholder="e.g., MOR001">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label">Registration Date From</label>
+                      <input type="date" class="form-control" formControlName="registrationDateFrom">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label">Registration Date To</label>
+                      <input type="date" class="form-control" formControlName="registrationDateTo">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label">Guardian Name</label>
+                      <input type="text" class="form-control" formControlName="guardianName" placeholder="Guardian's name">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary me-2" (click)="resetAdvancedSearch()">
+            <i class="fas fa-undo me-2"></i>
+            Reset
+          </button>
+          <button type="button" class="btn btn-outline-secondary me-2" (click)="closeAdvancedSearchModal()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isAdvancedSearching">
+            <span *ngIf="isAdvancedSearching" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!isAdvancedSearching" class="fas fa-search me-2"></i>
+            {{ isAdvancedSearching ? 'Searching...' : 'Apply Filters' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Backdrop -->
-<div class="modal-backdrop fade show" *ngIf="isGiftModalVisible || isGiftHistoryModalVisible"></div>
+<div class="modal-backdrop fade show" *ngIf="isGiftModalVisible || isGiftHistoryModalVisible || isSponsorshipGiftModalVisible || isAddDonorModalVisible || isSelectDonorModalVisible || isAdvancedSearchModalVisible"></div>

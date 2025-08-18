@@ -1,0 +1,59 @@
+<!-- Add Gift Form Modal -->
+<div class="modal fade" [class.show]="showAddGiftForm" [style.display]="showAddGiftForm ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Gift to {{ selectedProject?.name }}</h5>
+        <button type="button" class="btn-close" (click)="closeAddGiftForm()"></button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="submitNewGift()" #giftForm="ngForm">
+          <div class="mb-3">
+            <label class="form-label">Gift Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="newGiftForm.giftName" name="giftName" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Gift Type *</label>
+            <select class="form-select" [(ngModel)]="newGiftForm.giftTypeId" name="giftTypeId" required>
+              <option [ngValue]="0" disabled>Select Gift Type</option>
+              <option *ngFor="let type of availableGiftTypes" [value]="type.id">{{ type.name }}</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Donor ID *</label>
+            <input type="number" class="form-control" [(ngModel)]="newGiftForm.donorId" name="donorId" required>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Amount *</label>
+              <input type="number" class="form-control" [(ngModel)]="newGiftForm.amount" name="amount" min="0" step="0.01" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Gift Date *</label>
+              <input type="date" class="form-control" [(ngModel)]="newGiftForm.date" name="date" required>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" [(ngModel)]="newGiftForm.description" name="description" rows="3"></textarea>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeAddGiftForm()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="!giftForm.form.valid || isSubmitting">
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+              Add Gift
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showAddGiftForm"></div>

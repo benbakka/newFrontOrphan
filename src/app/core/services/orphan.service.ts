@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { OrphanListDTO } from '../models/orphan-list.dto';
 import { OrphanDetailDTO } from '../models/orphan-detail.dto';
+import { AdvancedSearchRequest } from '../models/advanced-search.model';
 
 @Injectable({
   providedIn: 'root'
@@ -91,6 +92,11 @@ export class OrphanService {
     return this.http.get<any[]>(`${this.apiUrl}/search`, {
       params: { query: query.trim() }
     });
+  }
+
+  // Advanced search orphans with multiple filters
+  advancedSearchOrphans(searchRequest: AdvancedSearchRequest): Observable<OrphanListDTO[]> {
+    return this.http.post<OrphanListDTO[]>(`${this.apiUrl}/advanced-search`, searchRequest);
   }
   
   // Update orphan photo only
