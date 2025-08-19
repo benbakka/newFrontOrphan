@@ -2,12 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CharityProject, CreateCharityProjectRequest, CharityProjectPage, ProjectStatus } from '../models/charity-project.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CharityProjectService {
-  private apiUrl = '${environment.apiUrl}/api/projects';
+  private apiUrl = `${environment.apiUrl}/api/projects`;
+
+
 
   constructor(private http: HttpClient) { }
 
