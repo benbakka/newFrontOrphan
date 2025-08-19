@@ -24,15 +24,15 @@ export class DocumentListComponent implements OnInit, OnChanges {
   get imageDocuments() {
     return this.documents.filter(d => d.mimeType.startsWith('image/'));
   }
-  
+
   get pdfDocuments() {
     return this.documents.filter(d => d.mimeType === 'application/pdf');
   }
-  
+
   get imageCount() {
     return this.imageDocuments.length;
   }
-  
+
   get pdfCount() {
     return this.pdfDocuments.length;
   }
@@ -89,8 +89,8 @@ export class DocumentListComponent implements OnInit, OnChanges {
 
   previewDocument(doc: OrphanDocument) {
     // Use the preview endpoint instead of the download endpoint
-    const previewUrl = `http://localhost:8080/api/orphans/documents/${doc.id}/preview`;
-    
+    const previewUrl = `${environment.apiUrl}/api/orphans/documents/${doc.id}/preview`;
+
     if (doc.mimeType === 'application/pdf') {
       // For PDFs, open in a new tab due to X-Frame-Options restrictions
       window.open(previewUrl, '_blank');
@@ -103,13 +103,13 @@ export class DocumentListComponent implements OnInit, OnChanges {
   showImagePreviewSimple(doc: OrphanDocument, previewUrl: string) {
     // Create modal for image preview
     const modalId = `imageModal_${doc.id}`;
-    
+
     // Remove any existing modal with the same ID
     const existingModal = document.getElementById(modalId);
     if (existingModal) {
       document.body.removeChild(existingModal);
     }
-    
+
     // Create modal container
     const modalContainer = document.createElement('div');
     modalContainer.id = modalId;
@@ -123,7 +123,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
     modalContainer.style.justifyContent = 'center';
     modalContainer.style.alignItems = 'center';
     modalContainer.style.zIndex = '1050';
-    
+
     // Create modal content
     modalContainer.innerHTML = `
       <div style="background: white; max-width: 90%; max-height: 90%; padding: 20px; border-radius: 5px; position: relative;">
@@ -137,10 +137,10 @@ export class DocumentListComponent implements OnInit, OnChanges {
         </div>
       </div>
     `;
-    
+
     // Add to DOM
     document.body.appendChild(modalContainer);
-    
+
     // Add event listeners
     const closeButton = document.getElementById(`${modalId}_close`);
     if (closeButton) {
@@ -148,7 +148,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
         document.body.removeChild(modalContainer);
       });
     }
-    
+
     // Add download button event listener
     const downloadButton = document.getElementById(`${modalId}_download`);
     if (downloadButton) {
@@ -156,7 +156,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
         this.downloadDocument(doc);
       });
     }
-    
+
     // Close on background click
     modalContainer.addEventListener('click', (event) => {
       if (event.target === modalContainer) {
@@ -164,17 +164,17 @@ export class DocumentListComponent implements OnInit, OnChanges {
       }
     });
   }
-  
+
   showPdfPreview(doc: OrphanDocument, previewUrl: string) {
     // Create modal for PDF preview
     const modalId = `pdfModal_${doc.id}`;
-    
+
     // Remove any existing modal with the same ID
     const existingModal = document.getElementById(modalId);
     if (existingModal) {
       document.body.removeChild(existingModal);
     }
-    
+
     // Create modal container
     const modalContainer = document.createElement('div');
     modalContainer.id = modalId;
@@ -188,7 +188,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
     modalContainer.style.justifyContent = 'center';
     modalContainer.style.alignItems = 'center';
     modalContainer.style.zIndex = '1050';
-    
+
     // Create modal content
     modalContainer.innerHTML = `
       <div style="background: white; width: 90%; height: 90%; padding: 20px; border-radius: 5px; position: relative; display: flex; flex-direction: column;">
@@ -202,10 +202,10 @@ export class DocumentListComponent implements OnInit, OnChanges {
         </div>
       </div>
     `;
-    
+
     // Add to DOM
     document.body.appendChild(modalContainer);
-    
+
     // Add event listeners
     const closeButton = document.getElementById(`${modalId}_close`);
     if (closeButton) {
@@ -213,7 +213,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
         document.body.removeChild(modalContainer);
       });
     }
-    
+
     // Add download button event listener
     const downloadButton = document.getElementById(`${modalId}_download`);
     if (downloadButton) {
@@ -221,7 +221,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
         this.downloadDocument(doc);
       });
     }
-    
+
     // Close on background click
     modalContainer.addEventListener('click', (event) => {
       if (event.target === modalContainer) {
@@ -233,13 +233,13 @@ export class DocumentListComponent implements OnInit, OnChanges {
   showImagePreview(doc: OrphanDocument) {
     // Create modal for image preview
     const modalId = `imageModal_${doc.id}`;
-    
+
     // Remove any existing modal with the same ID
     const existingModal = document.getElementById(modalId);
     if (existingModal) {
       document.body.removeChild(existingModal);
     }
-    
+
     // Create new modal element
     const modal = document.createElement('div');
     modal.className = 'modal fade';
@@ -247,7 +247,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
     modal.setAttribute('tabindex', '-1');
     modal.setAttribute('aria-labelledby', `${modalId}Label`);
     modal.setAttribute('aria-hidden', 'true');
-    
+
     // Set modal content with image preview
     modal.innerHTML = `
       <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -257,7 +257,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body text-center">
-            <img src="http://localhost:8080${doc.downloadUrl}" 
+            <img src="${environment.apiUrl}${doc.downloadUrl}"
                  class="img-fluid" alt="${doc.documentName}">
           </div>
           <div class="modal-footer">
@@ -269,14 +269,14 @@ export class DocumentListComponent implements OnInit, OnChanges {
         </div>
       </div>
     `;
-    
+
     // Add modal to document body
     document.body.appendChild(modal);
-    
+
     // Initialize Bootstrap modal
     const bootstrapModal = new (window as any).bootstrap.Modal(modal);
     bootstrapModal.show();
-    
+
     // Add download button event listener
     const downloadButton = document.getElementById(`${modalId}_download`);
     if (downloadButton) {
@@ -284,7 +284,7 @@ export class DocumentListComponent implements OnInit, OnChanges {
         this.downloadDocument(doc);
       });
     }
-    
+
     // Clean up when modal is hidden
     modal.addEventListener('hidden.bs.modal', () => {
       document.body.removeChild(modal);

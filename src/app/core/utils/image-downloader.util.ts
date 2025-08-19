@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class ImageDownloaderUtil {
-  
+
   /**
    * Downloads an image from a URL and converts it to a File object
    * @param imageUrl The URL of the image to download
@@ -21,23 +21,23 @@ export class ImageDownloaderUtil {
     if (imageUrl.includes('drive.google.com')) {
       console.log('Using backend proxy for Google Drive URL:', imageUrl);
       // Use backend proxy to download Google Drive images
-      const proxyUrl = `http://localhost:8080/api/orphans/proxy-image?url=${encodeURIComponent(imageUrl)}`;
-      
+      const proxyUrl = `${environment.apiUrl}/api/orphans/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+
       try {
         const response = await fetch(proxyUrl, { mode: 'cors' });
-        
+
         if (!response.ok) {
           console.error(`Failed to fetch image via proxy: ${response.status} ${response.statusText}`);
           return null;
         }
-        
+
         const blob = await response.blob();
-        
+
         if (!blob.type.startsWith('image/')) {
           console.error('Downloaded content is not an image:', blob.type);
           return null;
         }
-        
+
         const generatedFileName = fileName || this.generateFileName(imageUrl, blob.type);
         return new File([blob], generatedFileName, { type: blob.type });
       } catch (error) {
@@ -49,32 +49,32 @@ export class ImageDownloaderUtil {
     try {
       // Convert URLs to direct download URLs (for supported services)
       const directUrl = this.convertToDirectUrl(imageUrl);
-      
+
       // Fetch the image
-      const response = await fetch(directUrl, { 
+      const response = await fetch(directUrl, {
         mode: 'cors',
         headers: {
           'Accept': 'image/*'
         }
       });
-      
+
       if (!response.ok) {
         console.error(`Failed to fetch image: ${response.status} ${response.statusText}`);
         return null;
       }
-      
+
       // Get the blob
       const blob = await response.blob();
-      
+
       // Check if the blob is actually an image
       if (!blob.type.startsWith('image/')) {
         console.error('Downloaded content is not an image:', blob.type);
         return null;
       }
-      
+
       // Generate a filename if not provided
       const generatedFileName = fileName || this.generateFileName(imageUrl, blob.type);
-      
+
       // Create a File object from the blob
       return new File([blob], generatedFileName, { type: blob.type });
     } catch (error) {
@@ -99,7 +99,7 @@ export class ImageDownloaderUtil {
         return `https://drive.google.com/thumbnail?id=${fileId}&sz=w2048`;
       }
     }
-    
+
     // Handle Google Photos URLs
     if (url.includes('photos.google.com') || url.includes('googleusercontent.com')) {
       // Try to add size parameter for better download
@@ -107,12 +107,12 @@ export class ImageDownloaderUtil {
         return url + '=s2048'; // Request larger size
       }
     }
-    
+
     // Handle Dropbox URLs
     if (url.includes('dropbox.com') && url.includes('?dl=0')) {
       return url.replace('?dl=0', '?dl=1');
     }
-    
+
     // Return original URL if no conversion needed
     return url;
   }
@@ -124,41 +124,41 @@ export class ImageDownloaderUtil {
    */
   isImageUrl(url: string): boolean {
     if (!url || typeof url !== 'string') return false;
-    
+
     // Check if it's a URL
     if (!url.startsWith('http')) return false;
-    
+
     const lowerUrl = url.toLowerCase();
-    
+
     // Google Drive URLs are now supported via backend proxy
     if (lowerUrl.includes('drive.google.com/file/d/')) {
       return true;
     }
-    
+
     // Check for Google Photos URLs
     if (lowerUrl.includes('photos.google.com') || lowerUrl.includes('googleusercontent.com')) {
       return true;
     }
-    
+
     // Check for Dropbox URLs
     if (lowerUrl.includes('dropbox.com')) {
       return true;
     }
-    
+
     // Check if it has an image extension
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
-    
+
     // Check for common image extensions in the URL
     if (imageExtensions.some(ext => lowerUrl.endsWith(ext))) {
       return true;
     }
-    
+
     // Check for image-related domains or paths
     const imageRelatedTerms = ['image', 'img', 'photo', 'pic', 'upload', 'media'];
     if (imageRelatedTerms.some(term => lowerUrl.includes(term))) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -171,10 +171,10 @@ export class ImageDownloaderUtil {
   private generateFileName(url: string, mimeType: string): string {
     // Try to extract filename from URL
     let fileName = url.split('/').pop() || '';
-    
+
     // Remove query parameters if any
     fileName = fileName.split('?')[0];
-    
+
     // If no valid filename was extracted or it doesn't have an extension
     if (!fileName || !fileName.includes('.')) {
       // Generate a random name with appropriate extension
@@ -182,7 +182,7 @@ export class ImageDownloaderUtil {
       const timestamp = new Date().getTime();
       fileName = `image_${timestamp}${extension}`;
     }
-    
+
     return fileName;
   }
 
