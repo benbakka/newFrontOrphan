@@ -4,12 +4,13 @@ import { Observable } from 'rxjs';
 import { GiftType, CreateGiftTypeRequest, GiftTypeBalance } from '../models/gift-type.model';
 import { Donation } from '../models/donation.model';
 import { Gift } from '../models/gift.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GiftTypeService {
-  private apiUrl = 'http://localhost:8080/api/gift-types';
+  private apiUrl = `${environment.apiUrl}/api/gift-types`;
 
   constructor(private http: HttpClient) {}
 

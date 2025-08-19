@@ -350,7 +350,7 @@ export class PdfService {
           overflow: hidden; 
           text-overflow: ellipsis;
         ">
-          ${orphan.education?.gradeLevel || 'N/A'} Grade
+          ${orphan.education?.gradeLevel || 'N/A'} 
         </h1>
   
         <h1 style="
@@ -471,7 +471,7 @@ export class PdfService {
           overflow: hidden; 
           text-overflow: ellipsis;
         ">
-          ${orphan.education?.gradeLevel || 'N/A'} Grade
+          ${orphan.education?.gradeLevel || 'N/A'} 
         </h1>
 
         <h1 style="

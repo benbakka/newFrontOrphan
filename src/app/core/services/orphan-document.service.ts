@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { OrphanDocument, UploadDocumentRequest, DocumentType } from '../../shared/models/orphan-document.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class OrphanDocumentService {
-  public apiUrl = 'http://localhost:8080/api/orphans/documents';
+  public apiUrl = `${environment.apiUrl}/api/orphans/documents`;
 
   constructor(private http: HttpClient) {}
 

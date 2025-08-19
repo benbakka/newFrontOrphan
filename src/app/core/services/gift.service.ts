@@ -3,12 +3,13 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Gift, CreateGiftRequest, CreateGiftRequestV2 } from '../models/gift.model';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GiftService {
-  private apiUrl = 'http://localhost:8080/api/gifts';
+  private apiUrl = `${environment.apiUrl}/api/gifts`;
 
   constructor(
     private http: HttpClient,
