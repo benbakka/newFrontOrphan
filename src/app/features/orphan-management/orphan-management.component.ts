@@ -30,7 +30,6 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 import { OrphanDocumentService } from '../../core/services/orphan-document.service';
 import { OrphanDocument } from '../../shared/models/orphan-document.model';
 import { DocumentUploadComponent } from '../../shared/components/document-upload/document-upload.component';
-import { DocumentListComponent } from '../../shared/components/document-list/document-list.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -46,8 +45,7 @@ import { environment } from '../../../environments/environment';
     MatNativeDateModule,
     MatDialogModule,
     MatSnackBarModule,
-    DocumentUploadComponent,
-    DocumentListComponent
+    DocumentUploadComponent
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'en-US' }
@@ -130,6 +128,10 @@ export class OrphanManagementComponent implements OnInit {
   // Document management properties
   showDocumentUpload = false;
   documentRefreshTrigger: any = {};
+
+  // Gift edit properties
+  isEditingGift = false;
+  editingGiftId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -1520,11 +1522,19 @@ export class OrphanManagementComponent implements OnInit {
     }
   }
 
-  formatCurrency(amount: number): string {
+  formatCurrency(amount: any): string {
+    // Handle undefined, null, NaN, or non-numeric values
+    if (amount === undefined || amount === null || isNaN(parseFloat(amount))) {
+      return '$0.00';
+    }
+    
+    // Convert to number if it's a string
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount);
+    }).format(numericAmount);
   }
 
   formatDate(dateString: string): string {
@@ -1558,6 +1568,262 @@ export class OrphanManagementComponent implements OnInit {
     const today = new Date();
     
     return endDate > today ? 'ACTIVE' : 'EXPIRED';
+  }
+  
+  // Get all gifts from all sponsorships (remove duplicates)
+  getAllGifts(): any[] {
+    if (!this.selectedOrphan?.sponsorships) {
+      return [];
+    }
+    
+    console.log('=== DEBUG: getAllGifts() called ===');
+    console.log('Selected orphan sponsorships:', this.selectedOrphan.sponsorships);
+    
+    const allGifts: any[] = [];
+    const seenGiftIds = new Set<number>();
+    
+    this.selectedOrphan.sponsorships.forEach((sponsorship: any) => {
+      console.log('Processing sponsorship:', sponsorship);
+      if (sponsorship.gifts && Array.isArray(sponsorship.gifts)) {
+        console.log('Sponsorship gifts array:', sponsorship.gifts);
+        sponsorship.gifts.forEach((gift: any) => {
+          console.log('Processing individual gift:', gift);
+          const giftId = gift.id || gift.giftId;
+          if (giftId && !seenGiftIds.has(giftId)) {
+            seenGiftIds.add(giftId);
+            // Ensure proper field mapping based on database structure
+            console.log('Mapping gift fields:');
+            console.log('  gift.gift_value:', gift.gift_value);
+            console.log('  gift.giftValue:', gift.giftValue);
+            console.log('  gift.amount:', gift.amount);
+            console.log('  gift.gift_type_id:', gift.gift_type_id);
+            console.log('  gift.giftTypeId:', gift.giftTypeId);
+            
+            const mappedGift = {
+              ...gift,
+              // Map amount from gift_value column (as seen in database)
+              amount: gift.gift_value || gift.giftValue || gift.amount || 0,
+              // Map gift type from database structure
+              giftTypeName: this.getGiftTypeNameFromId(gift.gift_type_id) || gift.giftTypeName || gift.giftType || 'Unknown',
+              giftTypeId: gift.gift_type_id || gift.giftTypeId,
+              // Map donor name from sponsorship
+              donorName: sponsorship.donorName || gift.donorName,
+              // Map date fields
+              giftDate: gift.gift_date || gift.giftDate || gift.date,
+              // Ensure gift name is properly mapped
+              giftName: gift.gift_name || gift.giftName || 'Gift'
+            };
+            
+            console.log('Mapped gift result:', mappedGift);
+            allGifts.push(mappedGift);
+          } else if (!giftId) {
+            // If no ID, add anyway but this shouldn't happen in normal cases
+            const mappedGift = {
+              ...gift,
+              // Map amount from gift_value column (as seen in database)
+              amount: gift.gift_value || gift.giftValue || gift.amount || 0,
+              // Map gift type from database structure
+              giftTypeName: this.getGiftTypeNameFromId(gift.gift_type_id) || gift.giftTypeName || gift.giftType || 'Unknown',
+              giftTypeId: gift.gift_type_id || gift.giftTypeId,
+              // Map donor name from sponsorship
+              donorName: sponsorship.donorName || gift.donorName,
+              // Map date fields
+              giftDate: gift.gift_date || gift.giftDate || gift.date,
+              // Ensure gift name is properly mapped
+              giftName: gift.gift_name || gift.giftName || 'Gift'
+            };
+            allGifts.push(mappedGift);
+          }
+        });
+      }
+    });
+    
+    console.log('Final allGifts array:', allGifts);
+    console.log('=== END DEBUG: getAllGifts() ===');
+    return allGifts;
+  }
+
+  // Filter gifts by type and return only Monthly Sponsorship gifts
+  getMonthlyOrphanSponsorshipGifts(sponsorship: any): any[] {
+    if (!sponsorship.gifts || !Array.isArray(sponsorship.gifts)) {
+      return [];
+    }
+    
+    // For monthly sponsorships, return all gifts as they are associated with this sponsorship
+    if (sponsorship.sponsorshipType === 'MONTHLY') {
+      return sponsorship.gifts;
+    }
+    
+    // For other sponsorship types, use more specific filtering
+    return sponsorship.gifts.filter((gift: any) => 
+      gift.giftName === 'Orphan Sponsorship Monthly' || 
+      gift.giftTypeName === 'Orphan Sponsorship Monthly' ||
+      gift.giftType === 'SPONSORSHIP'
+    );
+  }
+  
+  // Group all gifts by their type (from all sponsorships)
+  getAllGiftsByType(): {[key: string]: {id: number, name: string, gifts: any[]}} {
+    const allGifts = this.getAllGifts();
+    
+    if (!allGifts || allGifts.length === 0) {
+      return {};
+    }
+    
+    const groupedGifts: {[key: string]: {id: number, name: string, gifts: any[]}} = {};
+    
+    allGifts.forEach((gift: any) => {
+      // Determine gift type ID and name
+      let giftTypeId = gift.gift_type_id || gift.giftTypeId;
+      let giftTypeName = '';
+      
+      // If we have a valid gift type ID, use it
+      if (giftTypeId && giftTypeId > 0) {
+        giftTypeName = this.getGiftTypeName(giftTypeId);
+      } 
+      // Otherwise, try to infer gift type from name
+      else {
+        // Map gift names to appropriate gift type IDs
+        const giftName = gift.giftName || '';
+        if (giftName.toLowerCase().includes('education')) {
+          giftTypeId = 26;
+          giftTypeName = 'Education General Fund';
+        } else if (giftName.toLowerCase().includes('medical')) {
+          giftTypeId = 3;
+          giftTypeName = 'Medical Fund';
+        } else if (giftName.toLowerCase().includes('food')) {
+          giftTypeId = 5;
+          giftTypeName = 'Food Fund';
+        } else if (giftName.toLowerCase().includes('emergency')) {
+          giftTypeId = 4;
+          giftTypeName = 'Emergency Fund';
+        } else if (giftName.toLowerCase().includes('sponsorship') || giftName.toLowerCase().includes('monthly')) {
+          giftTypeId = 1;
+          giftTypeName = 'Orphan Sponsorship Monthly';
+        } else {
+          // Default to General Donation if no match
+          giftTypeId = 2;
+          giftTypeName = 'General Donation';
+        }
+      }
+      
+      // If still no gift type name, use the gift type name from the data or default to "Other"
+      if (!giftTypeName) {
+        giftTypeName = gift.giftTypeName || 'Other';
+      }
+      
+      // Use the gift type ID as the key to ensure proper grouping by type
+      const key = giftTypeId.toString();
+      
+      if (!groupedGifts[key]) {
+        groupedGifts[key] = {
+          id: giftTypeId,
+          name: giftTypeName,
+          gifts: []
+        };
+      }
+      
+      groupedGifts[key].gifts.push(gift);
+    });
+    
+    return groupedGifts;
+  }
+
+  // Group gifts by their type (for individual sponsorship)
+  getGiftsByType(sponsorship: any): {[key: string]: {id: number, name: string, gifts: any[]}} {
+    if (!sponsorship.gifts || !Array.isArray(sponsorship.gifts)) {
+      return {};
+    }
+    
+    const groupedGifts: {[key: string]: {id: number, name: string, gifts: any[]}} = {};
+    
+    sponsorship.gifts.forEach((gift: any) => {
+      // Determine gift type ID and name
+      let giftTypeId = gift.gift_type_id || gift.giftTypeId;
+      let giftTypeName = '';
+      
+      // If we have a valid gift type ID, use it
+      if (giftTypeId && giftTypeId > 0) {
+        giftTypeName = this.getGiftTypeName(giftTypeId);
+      } 
+      // Otherwise, try to infer gift type from name
+      else {
+        // Map gift names to appropriate gift type IDs
+        const giftName = gift.giftName || '';
+        if (giftName.toLowerCase().includes('education')) {
+          giftTypeId = 26;
+          giftTypeName = 'Education General Fund';
+        } else if (giftName.toLowerCase().includes('medical')) {
+          giftTypeId = 3;
+          giftTypeName = 'Medical Fund';
+        } else if (giftName.toLowerCase().includes('food')) {
+          giftTypeId = 5;
+          giftTypeName = 'Food Fund';
+        } else if (giftName.toLowerCase().includes('emergency')) {
+          giftTypeId = 4;
+          giftTypeName = 'Emergency Fund';
+        } else if (giftName.toLowerCase().includes('sponsorship') || giftName.toLowerCase().includes('monthly')) {
+          giftTypeId = 1;
+          giftTypeName = 'Orphan Sponsorship Monthly';
+        } else {
+          // Default to General Donation if no match
+          giftTypeId = 2;
+          giftTypeName = 'General Donation';
+        }
+      }
+      
+      // If still no gift type name, use the gift type name from the data or default to "Other"
+      if (!giftTypeName) {
+        giftTypeName = gift.giftTypeName || 'Other';
+      }
+      
+      // Use the gift type ID as the key to ensure proper grouping by type
+      const key = giftTypeId.toString();
+      
+      if (!groupedGifts[key]) {
+        groupedGifts[key] = {
+          id: giftTypeId,
+          name: giftTypeName,
+          gifts: []
+        };
+      }
+      
+      groupedGifts[key].gifts.push(gift);
+    });
+    
+    return groupedGifts;
+  }
+  
+  // Get gift type name from ID
+  getGiftTypeName(giftTypeId: number): string {
+    // Map of known gift type IDs to names based on the database screenshots
+    const giftTypeMap: {[key: number]: string} = {
+      26: 'Education General Fund',
+      1: 'Orphan Sponsorship Monthly',
+      2: 'General Donation',
+      3: 'Medical Fund',
+      4: 'Emergency Fund',
+      5: 'Food Fund',
+      6: 'Clothing Fund',
+      7: 'Housing Fund',
+      8: 'Transportation Fund',
+      9: 'Special Needs Fund',
+      10: 'Holiday Fund'
+    };
+    
+    return giftTypeMap[giftTypeId] || '';
+  }
+  
+  // Get all gift types from all sponsorships
+  getAllGiftTypes(): {id: number, name: string, gifts: any[]}[] {
+    const groupedGifts = this.getAllGiftsByType();
+    return Object.values(groupedGifts);
+  }
+
+  // Get all gift types in a sponsorship
+  getGiftTypes(sponsorship: any): {id: number, name: string, gifts: any[]}[] {
+    const groupedGifts = this.getGiftsByType(sponsorship);
+    return Object.values(groupedGifts);
   }
   
   // Check if an orphan is currently sponsored
@@ -1729,8 +1995,39 @@ export class OrphanManagementComponent implements OnInit {
       this.isLoadingGifts = true;
       this.giftService.getGiftsByOrphan(this.selectedOrphan.id).subscribe({
         next: (gifts) => {
-          console.log('Loaded gifts:', gifts);
-          this.orphanGifts = gifts || [];
+          console.log('=== RAW API RESPONSE ===');
+          console.log('Raw gifts from API:', gifts);
+          console.log('Type of gifts:', typeof gifts);
+          console.log('Is array:', Array.isArray(gifts));
+          if (gifts && gifts.length > 0) {
+            console.log('First gift structure:', gifts[0]);
+            console.log('Gift keys:', Object.keys(gifts[0]));
+          }
+          
+          // Map the gifts to ensure proper field mapping
+          const mappedGifts = (gifts || []).map((gift: any) => {
+            console.log('Mapping gift:', gift);
+            const mapped = {
+              ...gift,
+              // Use the correct field from API response
+              amount: gift.amount || 0,
+              // Use the correct gift type fields from API
+              giftTypeName: gift.giftTypeName || this.getGiftTypeNameFromId(gift.giftTypeId) || 'Unknown',
+              giftTypeId: gift.giftTypeId,
+              // Use the correct date field
+              giftDate: gift.giftDate || gift.date,
+              // Use the correct name field
+              giftName: gift.giftName || 'Gift',
+              // Use the correct donor name
+              donorName: gift.donorName || 'Unknown Donor'
+            };
+            console.log('Mapped gift result:', mapped);
+            return mapped;
+          });
+          
+          this.orphanGifts = mappedGifts;
+          console.log('Final orphanGifts:', this.orphanGifts);
+          console.log('=== END RAW API RESPONSE ===');
           this.isLoadingGifts = false;
         },
         error: (error) => {
@@ -2133,4 +2430,162 @@ export class OrphanManagementComponent implements OnInit {
     this.documentRefreshTrigger = {}; // Trigger refresh of document list
     // No need for a snackbar message here as it's already shown in the document-upload component
   }
+
+  // Gift edit and delete functionality
+  editOrphanGift(gift: Gift): void {
+    // Find the sponsorship that contains this gift
+    const sponsorship = this.selectedOrphan?.sponsorships?.find(s => 
+      s.gifts?.some((g: any) => g.id === gift.id)
+    );
+    
+    if (!sponsorship) {
+      this.snackBar.open('Cannot find sponsorship for this gift', 'Close', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    // Format date for input field
+    let formattedDate = '';
+    if (gift.giftDate) {
+      const date = new Date(gift.giftDate);
+      formattedDate = date.toISOString().split('T')[0];
+    }
+
+    // Populate the gift form with existing data
+    this.giftForm.patchValue({
+      giftName: gift.giftName || '',
+      giftValue: gift.amount || 0,
+      giftDate: formattedDate,
+      description: gift.description || ''
+    });
+
+    // Set edit mode
+    this.isEditingGift = true;
+    this.editingGiftId = gift.id || null;
+  }
+
+  updateOrphanGift(): void {
+    if (this.giftForm.valid && this.editingGiftId) {
+      this.isSubmittingGift = true;
+      
+      // Find the original gift to get required fields
+      const originalGift = this.getAllGifts().find(g => g.id === this.editingGiftId);
+      if (!originalGift) {
+        this.snackBar.open('Cannot find original gift data', 'Close', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+        this.isSubmittingGift = false;
+        return;
+      }
+
+      const updateData: CreateGiftRequest = {
+        donorId: originalGift.donorId || 0,
+        giftType: originalGift.giftType || 1,
+        amount: this.giftForm.value.giftValue,
+        giftName: this.giftForm.value.giftName,
+        date: this.giftForm.value.giftDate,
+        description: this.giftForm.value.description,
+        orphanId: originalGift.orphanId,
+        projectId: originalGift.projectId,
+        sponsorshipId: originalGift.sponsorshipId
+      };
+
+      this.giftService.updateGift(this.editingGiftId, updateData).subscribe({
+        next: () => {
+          this.isSubmittingGift = false;
+          this.cancelEditOrphanGift();
+          
+          this.snackBar.open('Gift updated successfully!', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+          
+          // Reload sponsorships to refresh the gift list
+          this.loadSponsorships();
+        },
+        error: (error) => {
+          this.isSubmittingGift = false;
+          console.error('Error updating gift:', error);
+          
+          let errorMessage = 'Failed to update gift. Please try again.';
+          if (error.error && error.error.message) {
+            errorMessage = error.error.message;
+          }
+          
+          this.snackBar.open(errorMessage, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  cancelEditOrphanGift(): void {
+    this.isEditingGift = false;
+    this.editingGiftId = null;
+    this.giftForm.reset();
+  }
+
+  // Helper method to get gift type name from ID
+  private getGiftTypeNameFromId(giftTypeId: number): string {
+    if (!giftTypeId) return '';
+    
+    // Map based on common gift type IDs from the system
+    const giftTypeMap: {[key: number]: string} = {
+      1: 'Orphan Sponsorship Monthly',
+      2: 'General Donation', 
+      3: 'Medical Fund',
+      4: 'Emergency Fund',
+      5: 'Food Fund',
+      26: 'Education General Fund'
+    };
+    
+    return giftTypeMap[giftTypeId] || `Gift Type ${giftTypeId}`;
+  }
+
+  // Use the direct API data instead of sponsorship nested data
+  getDisplayGifts(): any[] {
+    // Use orphanGifts from direct API call which has correct data structure
+    return this.orphanGifts || [];
+  }
+
+  deleteOrphanGift(gift: Gift): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Delete Gift',
+        message: `Are you sure you want to delete this gift "${gift.giftName}"?`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && gift.id) {
+        this.giftService.deleteGift(gift.id).subscribe({
+          next: () => {
+            this.snackBar.open('Gift deleted successfully!', 'Close', {
+              duration: 3000,
+              panelClass: ['success-snackbar']
+            });
+            
+            // Reload sponsorships to refresh the gift list
+            this.loadSponsorships();
+          },
+          error: (error) => {
+            console.error('Error deleting gift:', error);
+            this.snackBar.open('Failed to delete gift. Please try again.', 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
+      }
+    });
+  }
+
 }

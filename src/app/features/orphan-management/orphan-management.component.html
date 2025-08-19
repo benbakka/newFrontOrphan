@@ -644,7 +644,7 @@
                     [disabled]="isOrphanSponsored()"
                   >
                     <i class="fas fa-user-plus me-2"></i>
-                    <span *ngIf="!isOrphanSponsored()">Add First Sponsor</span>
+                    <span *ngIf="!isOrphanSponsored()">Add Sponsor</span>
                     <span *ngIf="isOrphanSponsored()">Add Additional Sponsor</span>
                   </button>
                   <button 
@@ -654,7 +654,7 @@
                     [disabled]="isOrphanSponsored()"
                   >
                     <i class="fas fa-search me-2"></i>
-                    Select Existing Donor
+                    Assign Sponsor
                   </button>
                 </div>
 
@@ -776,63 +776,102 @@
                   </div>
                 </div>
 
-                <!-- Sponsorships with Gifts -->
-                <div class="col-12" *ngIf="selectedOrphan && selectedOrphan.sponsorships && selectedOrphan.sponsorships.length > 0">
-                  <div class="card mb-4" *ngFor="let sponsorship of selectedOrphan.sponsorships">
-                    <div class="card-header">
-                      <div class="row align-items-center">
-                        <div class="col">
-                          <h6 class="mb-0">
-                            <i class="fas fa-handshake me-2"></i>
-                            {{ sponsorship.donorName }}'s Sponsorship
-                          </h6>
-                          <small class="text-muted">
-                            {{ sponsorship.sponsorshipType === 'MONTHLY' ? 'Monthly' : 'Annual' }} - 
-                            {{ formatDate(sponsorship.startDate) }}
-                          </small>
-                        </div>
-                        <div class="col-auto">
-                          <span class="badge" [ngClass]="{'bg-success': getSponsorshipStatus(sponsorship) === 'Active', 'bg-secondary': getSponsorshipStatus(sponsorship) === 'Expired'}">
-                            {{ getSponsorshipStatus(sponsorship) }}
-                          </span>
-                        </div>
-                      </div>
+                <!-- Gift Edit Form -->
+                <div *ngIf="isEditingGift" class="col-12 mb-3">
+                  <div class="card">
+                    <div class="card-header bg-warning bg-opacity-10">
+                      <h6 class="card-title mb-0 text-warning">
+                        <i class="fas fa-edit me-2"></i>
+                        Edit Gift
+                      </h6>
                     </div>
                     <div class="card-body">
-                      <!-- Gifts for this sponsorship -->
-                      <div *ngIf="sponsorship.gifts && sponsorship.gifts.length > 0; else noGiftsForSponsorship">
-                        <div class="table-responsive">
-                          <table class="table table-sm">
-                            <thead>
-                              <tr>
-                                <th>Date</th>
-                                <th>Gift Name</th>
-                                <th>Value</th>
-                                <th>Description</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr *ngFor="let gift of sponsorship.gifts">
-                                <td>{{ formatDate(gift.giftDate) }}</td>
-                                <td>{{ gift.giftName }}</td>
-                                <td>{{ formatCurrency(gift.giftValue) }}</td>
-                                <td>{{ gift.description || 'No description' }}</td>
-                              </tr>
-                            </tbody>
-                          </table>
+                      <form [formGroup]="giftForm" (ngSubmit)="updateOrphanGift()">
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <label class="form-label">Gift Name *</label>
+                            <input type="text" class="form-control" formControlName="giftName" [class.is-invalid]="giftForm.get('giftName')?.invalid && giftForm.get('giftName')?.touched">
+                            <div class="invalid-feedback">
+                              Please enter a gift name
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Amount *</label>
+                            <div class="input-group">
+                              <span class="input-group-text">$</span>
+                              <input type="number" class="form-control" formControlName="giftValue" min="0.01" step="0.01" [class.is-invalid]="giftForm.get('giftValue')?.invalid && giftForm.get('giftValue')?.touched">
+                            </div>
+                            <div class="invalid-feedback">
+                              Please enter a valid amount
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Gift Date *</label>
+                            <input type="date" class="form-control" formControlName="giftDate" [class.is-invalid]="giftForm.get('giftDate')?.invalid && giftForm.get('giftDate')?.touched">
+                            <div class="invalid-feedback">
+                              Please select a date
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" formControlName="description" rows="2" placeholder="Optional notes about this gift..."></textarea>
+                          </div>
+                          <div class="col-12 text-end">
+                            <button type="button" class="btn btn-outline-secondary me-2" (click)="cancelEditOrphanGift()">Cancel</button>
+                            <button type="submit" class="btn btn-warning" [disabled]="giftForm.invalid || isSubmittingGift">
+                              <span *ngIf="isSubmittingGift" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                              <i *ngIf="!isSubmittingGift" class="fas fa-save me-2"></i>
+                              {{ isSubmittingGift ? 'Updating...' : 'Update Gift' }}
+                            </button>
+                          </div>
                         </div>
-                        <div class="text-end">
-                          <small class="text-muted">
-                            Total Gifts: {{ sponsorship.gifts.length }}
-                          </small>
-                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Gifts List -->
+                <div class="col-12" *ngIf="selectedOrphan">
+                  <div class="card">
+                    <div class="card-body p-0">
+                      <div *ngIf="getDisplayGifts().length === 0" class="text-center p-4">
+                        <i class="fas fa-info-circle text-muted fa-2x mb-3"></i>
+                        <p class="text-muted">No gifts found for this orphan.</p>
                       </div>
-                      <ng-template #noGiftsForSponsorship>
-                        <div class="text-center text-muted py-3">
-                          <i class="fas fa-gift fa-2x mb-2"></i>
-                          <p class="mb-0">No gifts for this sponsorship yet</p>
-                        </div>
-                      </ng-template>
+                      <div *ngIf="getDisplayGifts().length > 0" class="table-responsive">
+                        <table class="table table-hover mb-0">
+                          <thead class="table-light">
+                            <tr>
+                              <th>Date</th>
+                              <th>Type</th>
+                              <th>Amount</th>
+                              <th>Notes</th>
+                              <th class="text-end">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let gift of getDisplayGifts()">
+                              <td>{{ gift.giftDate | date:'mediumDate' }}</td>
+                              <td>
+                                <span class="badge bg-primary me-1">{{ gift.giftTypeName || gift.giftType }}</span>
+                                <div class="small text-muted" *ngIf="gift.donorName">
+                                  <i class="fas fa-user me-1"></i>{{ gift.donorName }}
+                                </div>
+                              </td>
+                              <td>{{ formatCurrency(gift.amount) }}</td>
+                              <td>{{ gift.description || 'N/A' }}</td>
+                              <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-1" (click)="editOrphanGift(gift)" [disabled]="isEditingGift">
+                                  <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" (click)="deleteOrphanGift(gift)" [disabled]="isEditingGift">
+                                  <i class="fas fa-trash-alt"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1050,7 +1089,7 @@
                 <select class="form-select" id="donorId" formControlName="donorId" [class.is-invalid]="giftForm.get('donorId')?.invalid && giftForm.get('donorId')?.touched">
                   <option value="">Select a donor</option>
                   <option *ngFor="let donor of donors" [value]="donor.id">
-                    {{ donor.name }} - {{ donor.email }}
+                    {{ donor.firstName }} {{ donor.lastName }} - {{ donor.email }}
                   </option>
                 </select>
                 <div class="invalid-feedback">
@@ -1533,7 +1572,7 @@
       <div class="modal-header">
         <h5 class="modal-title">
           <i class="fas fa-search me-2"></i>
-          Select Existing Donor & Create Sponsorship
+          Assign sponsor
         </h5>
         <button type="button" class="btn-close" (click)="closeSelectDonorModal()"></button>
       </div>
@@ -1553,7 +1592,7 @@
                 <select class="form-select" formControlName="donorId" required>
                   <option value="">Select a donor...</option>
                   <option *ngFor="let donor of donors" [value]="donor.id">
-                    {{ donor.name }} ({{ donor.donorId }})
+                    {{ donor.firstName }} {{ donor.lastName }} ({{ donor.donorId }})
                   </option>
                 </select>
               </div>

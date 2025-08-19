@@ -29,7 +29,8 @@ import { CharityProjectService } from '../../shared/services/charity-project.ser
 interface DonorDetailDTO {
   id: number;
   donorId: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   address: string;
@@ -147,7 +148,8 @@ export class DonorManagementComponent implements OnInit {
   ) {
     this.donorForm = this.fb.group({
       donorId: ['', Validators.required],
-      name: ['', Validators.required],
+      firstName: ['', Validators.required],
+      lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       phone: ['', Validators.required],
       address: ['', Validators.required],
@@ -218,7 +220,8 @@ export class DonorManagementComponent implements OnInit {
             this.selectedDonorDetail = {
               id: donor.id as number,
               donorId: donor.donorId || '',
-              name: donor.name,
+              firstName: donor.firstName,
+              lastName: donor.lastName,
               email: donor.email,
               phone: donor.phone,
               address: donor.address,
@@ -641,7 +644,8 @@ filterDonors(): void {
   } else {
     const searchTermLower = this.searchTerm.toLowerCase().trim();
     this.filteredDonors = this.donors.filter(donor => 
-      donor.name.toLowerCase().includes(searchTermLower) ||
+      donor.firstName.toLowerCase().includes(searchTermLower) ||
+      donor.lastName.toLowerCase().includes(searchTermLower) ||
       donor.email.toLowerCase().includes(searchTermLower) ||
       donor.phone?.toLowerCase().includes(searchTermLower) ||
       donor.city?.toLowerCase().includes(searchTermLower) ||
@@ -697,7 +701,8 @@ editDonor(donor: Donor): void {
   this.isFormVisible = true;
   this.donorForm.patchValue({
     donorId: donor.donorId || '',
-    name: donor.name,
+    firstName: donor.firstName,
+    lastName: donor.lastName,
     email: donor.email,
     phone: donor.phone,
     address: donor.address,
@@ -714,7 +719,7 @@ deleteDonor(donorId: number): void {
   const donor = this.donors.find(d => d.id === donorId);
   if (!donor) return;
   
-  if (confirm(`Are you sure you want to delete ${donor.name}?`)) {
+  if (confirm(`Are you sure you want to delete ${donor.firstName} ${donor.lastName}?`)) {
     this.donorService.deleteDonor(donorId).subscribe({
       next: () => {
         this.donors = this.donors.filter(d => d.id !== donor.id);

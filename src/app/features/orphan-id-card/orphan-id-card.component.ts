@@ -103,7 +103,8 @@ export class OrphanIdCardComponent implements OnInit {
     this.sponsorshipService.getSponsorshipsByOrphanId(orphanId).subscribe({
       next: (sponsorships) => {
         this.sponsorships = sponsorships;
-        this.currentSponsorship = sponsorships.find(s => !s.endDate) || null;
+        // Find active sponsorship: no endDate AND status is not CANCELLED
+        this.currentSponsorship = sponsorships.find(s => !s.endDate && s.status !== 'CANCELLED') || null;
       },
       error: (error) => {
         console.error('Error loading sponsorships:', error);

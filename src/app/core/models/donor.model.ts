@@ -1,7 +1,8 @@
 export interface Donor {
   id?: number;
   donorId?: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   address: string;
   addressTwo?: string;
   phone: string;
@@ -16,7 +17,8 @@ export interface Donor {
 export interface DonorListDTO {
   id: number;
   donorId: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   city: string;
@@ -29,7 +31,8 @@ export interface DonorListDTO {
 export interface DonorDetailDTO {
   id: number;
   donorId: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   address: string;
   addressTwo?: string;
   phone: string;
