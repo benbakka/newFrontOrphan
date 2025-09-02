@@ -55,6 +55,7 @@ export interface DonorSponsorshipInfo {
   startDate: string;
   endDate?: string;
   gifts?: DonorGiftInfo[];
+  isLimited?: boolean;
 }
 
 export interface DonorGiftInfo {

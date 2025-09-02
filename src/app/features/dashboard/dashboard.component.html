@@ -7,6 +7,14 @@
     </a>
     
     <div class="navbar-nav ms-auto">
+      <!-- Styled Logout Button -->
+      <div class="nav-item me-3 d-flex align-items-center">
+        <button class="btn btn-outline-light btn-sm rounded-pill px-3 border-0 logout-btn" (click)="logout()">
+          <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </button>
+      </div>
+      
+      <!-- User Dropdown -->
       <div class="nav-item dropdown">
         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
           <i class="fas fa-user-circle me-2"></i>
@@ -16,7 +24,7 @@
           <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
           <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" href="#" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          <li><a class="dropdown-item" href="javascript:void(0)" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
         </ul>
       </div>
     </div>
@@ -25,11 +33,32 @@
 
 <!-- Main Content Area -->
 <div class="container-fluid mt-4">
+  <!-- Loading State -->
+  <div *ngIf="isLoadingPermissions" class="row">
+    <div class="col-12 text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading permissions...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading your permissions...</p>
+    </div>
+  </div>
+
+  <!-- No Permissions State -->
+  <div *ngIf="!isLoadingPermissions && availableTabs.length === 0" class="row">
+    <div class="col-12 text-center py-5">
+      <div class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Access Restricted</strong>
+        <p class="mb-0 mt-2">You don't have permission to access any sections. Please contact your administrator.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Tab Navigation -->
-  <div class="row">
+  <div *ngIf="!isLoadingPermissions && availableTabs.length > 0" class="row">
     <div class="col-12">
       <ul class="nav nav-tabs nav-tabs-custom mb-4">
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="availableTabs.includes('orphans')">
           <button 
             class="nav-link" 
             [class.active]="activeTab === 'orphans'"
@@ -39,7 +68,7 @@
             Orphan Management
           </button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="availableTabs.includes('donors')">
           <button 
             class="nav-link" 
             [class.active]="activeTab === 'donors'"
@@ -49,7 +78,7 @@
             Donor Management
           </button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="availableTabs.includes('gifts')">
           <button 
             class="nav-link" 
             [class.active]="activeTab === 'gifts'"
@@ -59,7 +88,7 @@
             Gift Types & Funds
           </button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="availableTabs.includes('projects')">
           <button 
             class="nav-link" 
             [class.active]="activeTab === 'projects'"
@@ -69,7 +98,17 @@
             Charity Projects
           </button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="availableTabs.includes('users')">
+          <button 
+            class="nav-link" 
+            [class.active]="activeTab === 'users'"
+            (click)="setActiveTab('users')"
+          >
+            <i class="fas fa-users me-2"></i>
+            User Management
+          </button>
+        </li>
+        <li class="nav-item" *ngIf="availableTabs.includes('reports')">
           <button 
             class="nav-link" 
             [class.active]="activeTab === 'reports'"
@@ -84,20 +123,20 @@
   </div>
 
   <!-- Tab Content -->
-  <div class="row">
+  <div *ngIf="!isLoadingPermissions && availableTabs.length > 0" class="row">
     <div class="col-12">
       <!-- Orphan Management Tab -->
-      <div *ngIf="activeTab === 'orphans'" class="tab-content-panel">
+      <div *ngIf="activeTab === 'orphans' && availableTabs.includes('orphans')" class="tab-content-panel">
         <app-orphan-management></app-orphan-management>
       </div>
 
       <!-- Donor Management Tab -->
-      <div *ngIf="activeTab === 'donors'" class="tab-content-panel">
+      <div *ngIf="activeTab === 'donors' && availableTabs.includes('donors')" class="tab-content-panel">
         <app-donor-management></app-donor-management>
       </div>
 
       <!-- Gift Types & Funds Tab -->
-      <div *ngIf="activeTab === 'gifts'" class="tab-content-panel">
+      <div *ngIf="activeTab === 'gifts' && availableTabs.includes('gifts')" class="tab-content-panel">
         <ng-container *ngIf="giftsComponent">
           <ng-container *ngComponentOutlet="giftsComponent"></ng-container>
         </ng-container>
@@ -109,23 +148,18 @@
       </div>
 
       <!-- Charity Projects Tab -->
-      <div *ngIf="activeTab === 'projects'" class="tab-content-panel">
+      <div *ngIf="activeTab === 'projects' && availableTabs.includes('projects')" class="tab-content-panel">
         <app-charity-projects></app-charity-projects>
       </div>
 
+      <!-- User Management Tab -->
+      <div *ngIf="activeTab === 'users' && availableTabs.includes('users')" class="tab-content-panel">
+        <app-user-management></app-user-management>
+      </div>
+
       <!-- Reports Tab -->
-      <div *ngIf="activeTab === 'reports'" class="tab-content-panel">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-chart-bar me-2"></i>
-              Reports & Analytics
-            </h5>
-          </div>
-          <div class="card-body">
-            <p class="text-muted">Reports and analytics functionality will be implemented here.</p>
-          </div>
-        </div>
+      <div *ngIf="activeTab === 'reports' && availableTabs.includes('reports')" class="tab-content-panel">
+        <app-reports></app-reports>
       </div>
     </div>
   </div>

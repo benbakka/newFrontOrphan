@@ -102,58 +102,124 @@
     </div>
   </div>
 
-  <!-- Gift Types Grid -->
+  <!-- Gift Type Categories Accordion -->
   <div class="row" *ngIf="!isLoading && !error">
-    <div class="col-xl-3 col-lg-4 col-md-6 mb-4" *ngFor="let giftType of giftTypes">
-      <div class="card h-100 gift-type-card {{ getCardClass(giftType) }}" 
-           (click)="openGiftTypeDetails(giftType)" 
-           style="cursor: pointer;">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h6 class="card-title mb-0" [title]="giftType.name">
-              {{ giftType.name.length > 25 ? (giftType.name | slice:0:25) + '...' : giftType.name }}
-            </h6>
-            <i class="fas fa-chevron-right text-muted"></i>
-          </div>
+    <div class="col-12">
+      <div class="accordion" id="giftTypeCategoriesAccordion">
+        <div class="accordion-item mb-3" *ngFor="let category of categories; let i = index">
+          <!-- Category Header -->
+          <h2 class="accordion-header" [id]="'heading' + i">
+            <button class="accordion-button category-header" 
+                    [class.collapsed]="!category.isExpanded"
+                    type="button" 
+                    (click)="toggleCategory(category)"
+                    [attr.aria-expanded]="category.isExpanded"
+                    [attr.aria-controls]="'collapse' + i">
+              <div class="d-flex align-items-center w-100">
+                <div class="category-icon me-3">
+                  <i [class]="category.icon + ' text-' + category.color + ' fa-2x'"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="mb-1 fw-bold">{{ category.name }}</h5>
+                      <small class="text-muted">{{ category.giftTypes.length }} fund(s)</small>
+                    </div>
+                    <div class="category-stats text-end">
+                      <div class="row text-center">
+                        <div class="col-4">
+                          <div class="text-success">
+                            <i class="fas fa-arrow-up"></i>
+                            <div class="small">Donations</div>
+                            <div class="fw-bold">{{ formatCurrency(category.totalDonations) }}</div>
+                          </div>
+                        </div>
+                        <div class="col-4">
+                          <div class="text-warning">
+                            <i class="fas fa-arrow-down"></i>
+                            <div class="small">Expenses</div>
+                            <div class="fw-bold">{{ formatCurrency(category.totalExpenses) }}</div>
+                          </div>
+                        </div>
+                        <div class="col-4">
+                          <div [class]="getBalanceClass(category.balance)">
+                            <i [class]="getBalanceIcon(category.balance)"></i>
+                            <div class="small">Balance</div>
+                            <div class="fw-bold">{{ formatCurrency(category.balance) }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </button>
+          </h2>
           
-          <div class="mb-3">
-            <div class="row text-center">
-              <div class="col-4">
-                <div class="text-success">
-                  <i class="fas fa-plus-circle"></i>
-                  <div class="small">Donations</div>
-                  <div class="fw-bold">{{ formatCurrency(giftType.totalDonations) }}</div>
-                </div>
-              </div>
-              <div class="col-4">
-                <div class="text-warning">
-                  <i class="fas fa-minus-circle"></i>
-                  <div class="small">Expenses</div>
-                  <div class="fw-bold">{{ formatCurrency(giftType.totalExpenses) }}</div>
-                </div>
-              </div>
-              <div class="col-4">
-                <div [class]="getBalanceClass(giftType.balance)">
-                  <i [class]="getBalanceIcon(giftType.balance)"></i>
-                  <div class="small">Balance</div>
-                  <div class="fw-bold">{{ formatCurrency(giftType.balance) }}</div>
+          <!-- Category Content -->
+          <div [id]="'collapse' + i" 
+               class="accordion-collapse collapse"
+               [class.show]="category.isExpanded"
+               [attr.aria-labelledby]="'heading' + i"
+               data-bs-parent="#giftTypeCategoriesAccordion">
+            <div class="accordion-body">
+              <div class="row">
+                <div class="col-xl-3 col-lg-4 col-md-6 mb-4" *ngFor="let giftType of category.giftTypes">
+                  <div class="card h-100 gift-type-card {{ getCardClass(giftType) }}" 
+                       (click)="openGiftTypeDetails(giftType)" 
+                       style="cursor: pointer;">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="card-title mb-0" [title]="giftType.name">
+                          {{ giftType.name.length > 25 ? (giftType.name | slice:0:25) + '...' : giftType.name }}
+                        </h6>
+                        <i class="fas fa-chevron-right text-muted"></i>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <div class="row text-center">
+                          <div class="col-4">
+                            <div class="text-success">
+                              <i class="fas fa-plus-circle"></i>
+                              <div class="small">Donations</div>
+                              <div class="fw-bold">{{ formatCurrency(giftType.totalDonations) }}</div>
+                            </div>
+                          </div>
+                          <div class="col-4">
+                            <div class="text-warning">
+                              <i class="fas fa-minus-circle"></i>
+                              <div class="small">Expenses</div>
+                              <div class="fw-bold">{{ formatCurrency(giftType.totalExpenses) }}</div>
+                            </div>
+                          </div>
+                          <div class="col-4">
+                            <div [class]="getBalanceClass(giftType.balance)">
+                              <i [class]="getBalanceIcon(giftType.balance)"></i>
+                              <div class="small">Balance</div>
+                              <div class="fw-bold">{{ formatCurrency(giftType.balance) }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Progress Bar -->
+                      <div class="progress mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-success" 
+                             [style.width.%]="getProgressPercentage(giftType.totalDonations || 0, (giftType.totalDonations || 0) + (giftType.totalExpenses || 0))"
+                             [title]="'Donations: ' + formatCurrency(giftType.totalDonations)"></div>
+                        <div class="progress-bar bg-warning" 
+                             [style.width.%]="getProgressPercentage(giftType.totalExpenses || 0, (giftType.totalDonations || 0) + (giftType.totalExpenses || 0))"
+                             [title]="'Expenses: ' + formatCurrency(giftType.totalExpenses)"></div>
+                      </div>
+
+                      <div class="text-muted small" *ngIf="giftType.description">
+                        {{ giftType.description.length > 50 ? (giftType.description | slice:0:50) + '...' : giftType.description }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Progress Bar -->
-          <div class="progress mb-2" style="height: 6px;">
-            <div class="progress-bar bg-success" 
-                 [style.width.%]="getProgressPercentage(giftType.totalDonations || 0, (giftType.totalDonations || 0) + (giftType.totalExpenses || 0))"
-                 [title]="'Donations: ' + formatCurrency(giftType.totalDonations)"></div>
-            <div class="progress-bar bg-warning" 
-                 [style.width.%]="getProgressPercentage(giftType.totalExpenses || 0, (giftType.totalDonations || 0) + (giftType.totalExpenses || 0))"
-                 [title]="'Expenses: ' + formatCurrency(giftType.totalExpenses)"></div>
-          </div>
-
-          <div class="text-muted small" *ngIf="giftType.description">
-            {{ giftType.description.length > 50 ? (giftType.description | slice:0:50) + '...' : giftType.description }}
           </div>
         </div>
       </div>
@@ -161,7 +227,7 @@
   </div>
 
   <!-- Empty State -->
-  <div class="row" *ngIf="!isLoading && !error && giftTypes.length === 0">
+  <div class="row" *ngIf="!isLoading && !error && categories.length === 0">
     <div class="col-12 text-center py-5">
       <i class="fas fa-gift fa-3x text-muted mb-3"></i>
       <h4 class="text-muted">No Gift Types Found</h4>

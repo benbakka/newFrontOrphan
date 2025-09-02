@@ -10,7 +10,7 @@ export interface OrphanListDTO {
   country: string;
   healthStatus: string;
   
-  // Sponsorship Information
+  // rmation
   isSponsored?: boolean;
   sponsorships?: SponsorshipInfo[];
   
@@ -32,4 +32,5 @@ export interface SponsorshipInfo {
   startDate: string;
   endDate?: string;
   gifts?: any[];
+  isLimited?: boolean;
 }

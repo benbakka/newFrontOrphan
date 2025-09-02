@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Donor, DonorDetailDTO, DonorListDTO } from '../models/donor.model';
 import { OrphanListDTO } from '../models/orphan-list.dto';
+import { DonorAdvancedSearchRequest } from '../models/donor-advanced-search.model';
 
 @Injectable({
   providedIn: 'root'
@@ -80,5 +81,57 @@ export class DonorService {
       startDate
     };
     return this.http.post<DonorDetailDTO>(`${this.baseUrl}/with-sponsorships`, payload, { headers: this.getAuthHeaders() });
+  }
+
+  // Advanced search donors with multiple filters
+  // Temporary client-side implementation until backend is ready
+  advancedSearchDonors(searchRequest: DonorAdvancedSearchRequest): Observable<Donor[]> {
+    // Get all donors and filter them client-side
+    return this.getDonors().pipe(
+      map((donors: Donor[]) => this.filterDonorsBySearchCriteria(donors, searchRequest))
+    );
+  }
+
+  // Client-side filtering implementation
+  private filterDonorsBySearchCriteria(donors: Donor[], criteria: DonorAdvancedSearchRequest): Donor[] {
+    if (!criteria || Object.keys(criteria).length === 0) {
+      return donors;
+    }
+
+    return donors.filter(donor => {
+      // Personal Info filters
+      if (criteria.firstName && !donor.firstName?.toLowerCase().includes(criteria.firstName.toLowerCase())) {
+        return false;
+      }
+      if (criteria.lastName && !donor.lastName?.toLowerCase().includes(criteria.lastName.toLowerCase())) {
+        return false;
+      }
+      if (criteria.email && !donor.email?.toLowerCase().includes(criteria.email.toLowerCase())) {
+        return false;
+      }
+      if (criteria.phone && !donor.phone?.includes(criteria.phone)) {
+        return false;
+      }
+      if (criteria.city && !donor.city?.toLowerCase().includes(criteria.city.toLowerCase())) {
+        return false;
+      }
+      if (criteria.country && !donor.country?.toLowerCase().includes(criteria.country.toLowerCase())) {
+        return false;
+      }
+      
+      // Donation Info filters - basic implementation
+      // Note: These filters would normally be handled by the backend
+      // This is a simplified version for client-side filtering
+      
+      // Sponsorship Info filters - basic implementation
+      // Note: These filters would normally be handled by the backend
+      
+      // Other Info filters
+      if (criteria.donorId && donor.id !== parseInt(criteria.donorId.toString(), 10)) {
+        return false;
+      }
+      
+      return true;
+    });
   }
 }

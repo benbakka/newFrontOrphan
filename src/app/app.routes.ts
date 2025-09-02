@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
+import { PermissionGuard } from './core/guards/permission.guard';
 
 export const routes: Routes = [
   {
@@ -24,17 +25,30 @@ export const routes: Routes = [
   {
     path: 'donors',
     loadComponent: () => import('./features/donor-management/donor-management.component').then(m => m.DonorManagementComponent),
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, PermissionGuard]
   },
   {
     path: 'charity-projects',
     loadComponent: () => import('./features/charity-projects/charity-projects.component').then(m => m.CharityProjectsComponent),
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, PermissionGuard]
   },
   {
     path: 'gifts',
     loadComponent: () => import('./features/gifts/gifts.component').then(m => m.GiftsComponent),
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, PermissionGuard]
+  },
+  {
+    path: 'user-management',
+    loadComponent: () => import('./features/user-management/user-management.component').then(m => m.UserManagementComponent),
+    canActivate: [AuthGuard, PermissionGuard]
+  },
+  {
+    path: 'access-denied',
+    loadComponent: () => import('./features/access-denied/access-denied.component').then(m => m.AccessDeniedComponent)
+  },
+  {
+    path: 'logout',
+    loadComponent: () => import('./features/logout/logout.component').then(m => m.LogoutComponent)
   },
   {
     path: '**',

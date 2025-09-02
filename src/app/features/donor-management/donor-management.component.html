@@ -48,7 +48,7 @@
             Donors List ({{ filteredDonors.length }})
           </h6>
           <!-- Search -->
-          <div class="input-group">
+          <div class="input-group mb-2">
             <span class="input-group-text">
               <i class="fas fa-search"></i>
             </span>
@@ -59,6 +59,23 @@
               [(ngModel)]="searchTerm"
               (input)="filterDonors()"
             >
+            <button 
+              class="btn btn-outline-secondary" 
+              type="button"
+              (click)="openAdvancedSearchModal()"
+              title="Advanced Search"
+            >
+              <i class="fas fa-filter me-1"></i>
+              Advanced
+            </button>
+          </div>
+          <!-- Advanced Search Status -->
+          <div *ngIf="isAdvancedSearchApplied" class="d-flex align-items-center mb-2 text-primary small">
+            <i class="fas fa-filter me-1"></i>
+            <span>Advanced filters applied</span>
+            <button class="btn btn-sm text-primary p-0 ms-2" (click)="clearAdvancedSearch()" title="Clear filters">
+              <i class="fas fa-times-circle"></i>
+            </button>
           </div>
         </div>
         <div class="card-body p-0">
@@ -151,21 +168,21 @@
               <div class="card-body">
                 <div class="row">
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Donor ID *</label>
+                    <label class="form-label">Donor ID </label>
                     <input type="text" class="form-control" formControlName="donorId" placeholder="Enter donor ID">
                     <div *ngIf="donorForm.get('donorId')?.invalid && donorForm.get('donorId')?.touched" class="text-danger small">
                       Donor ID is required
                     </div>
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">First Name *</label>
+                    <label class="form-label">First Name </label>
                     <input type="text" class="form-control" formControlName="firstName" placeholder="Enter first name">
                     <div *ngIf="donorForm.get('firstName')?.invalid && donorForm.get('firstName')?.touched" class="text-danger small">
                       First name is required
                     </div>
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Last Name *</label>
+                    <label class="form-label">Last Name </label>
                     <input type="text" class="form-control" formControlName="lastName" placeholder="Enter last name">
                     <div *ngIf="donorForm.get('lastName')?.invalid && donorForm.get('lastName')?.touched" class="text-danger small">
                       Last name is required
@@ -174,14 +191,14 @@
                 </div>
                 <div class="row">
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Email *</label>
+                    <label class="form-label">Email </label>
                     <input type="email" class="form-control" formControlName="email" placeholder="Enter email address">
                     <div *ngIf="donorForm.get('email')?.invalid && donorForm.get('email')?.touched" class="text-danger small">
                       Valid email is required
                     </div>
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Phone *</label>
+                    <label class="form-label">Phone </label>
                     <input type="tel" class="form-control" formControlName="phone" placeholder="Enter phone number">
                     <div *ngIf="donorForm.get('phone')?.invalid && donorForm.get('phone')?.touched" class="text-danger small">
                       Phone is required
@@ -194,7 +211,7 @@
                     <input type="text" class="form-control" formControlName="company" placeholder="Enter company name (optional)">
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Country *</label>
+                    <label class="form-label">Country </label>
                     <input type="text" class="form-control" formControlName="country" placeholder="Enter country">
                     <div *ngIf="donorForm.get('country')?.invalid && donorForm.get('country')?.touched" class="text-danger small">
                       Country is required
@@ -203,7 +220,7 @@
                 </div>
                 <div class="row">
                   <div class="col-12 mb-3">
-                    <label class="form-label">Address *</label>
+                    <label class="form-label">Address </label>
                     <input type="text" class="form-control" formControlName="address" placeholder="Enter primary address">
                     <div *ngIf="donorForm.get('address')?.invalid && donorForm.get('address')?.touched" class="text-danger small">
                       Address is required
@@ -218,21 +235,21 @@
                 </div>
                 <div class="row">
                   <div class="col-md-4 mb-3">
-                    <label class="form-label">City *</label>
+                    <label class="form-label">City </label>
                     <input type="text" class="form-control" formControlName="city" placeholder="Enter city">
                     <div *ngIf="donorForm.get('city')?.invalid && donorForm.get('city')?.touched" class="text-danger small">
                       City is required
                     </div>
                   </div>
                   <div class="col-md-4 mb-3">
-                    <label class="form-label">State/Province *</label>
+                    <label class="form-label">State/Province </label>
                     <input type="text" class="form-control" formControlName="state" placeholder="Enter state/province">
                     <div *ngIf="donorForm.get('state')?.invalid && donorForm.get('state')?.touched" class="text-danger small">
                       State is required
                     </div>
                   </div>
                   <div class="col-md-4 mb-3">
-                    <label class="form-label">ZIP/Postal Code *</label>
+                    <label class="form-label">ZIP/Postal Code </label>
                     <input type="text" class="form-control" formControlName="zip" placeholder="Enter ZIP/postal code">
                     <div *ngIf="donorForm.get('zip')?.invalid && donorForm.get('zip')?.touched" class="text-danger small">
                       ZIP code is required
@@ -445,17 +462,17 @@
                             <div class="stat-icon mb-2 rounded-circle bg-success bg-opacity-10 p-2">
                               <i class="fas fa-gift text-success"></i>
                             </div>
-                            <div class="stat-value fw-bold text-success">{{ selectedDonorDetail.statistics?.totalGifts || 0 }}</div>
+                            <div class="stat-value fw-bold text-success">{{ formatCurrency(selectedDonorDetail.statistics?.totalGifts || 0) }}</div>
                             <div class="stat-label small text-muted">Total Gifts</div>
                           </div>
                         </div>
                         <div class="col-md-3 p-3 border-end">
                           <div class="d-flex flex-column align-items-center">
-                            <div class="stat-icon mb-2 rounded-circle bg-info bg-opacity-10 p-2">
-                              <i class="fas fa-child text-info"></i>
+                            <div class="stat-icon mb-2 rounded-circle bg-warning bg-opacity-10 p-2">
+                              <i class="fas fa-trophy text-warning"></i>
                             </div>
-                            <div class="stat-value fw-bold text-info">{{ selectedDonorDetail.statistics?.totalOrphansSponsored || 0 }}</div>
-                            <div class="stat-label small text-muted">Sponsored Orphans</div>
+                            <div class="stat-value fw-bold text-warning">{{ formatCurrency(getHighestDonation()) }}</div>
+                            <div class="stat-label small text-muted">Highest Donation</div>
                           </div>
                         </div>
                         <div class="col-md-3 p-3">
@@ -478,35 +495,132 @@
                 </div>
               </div>
 
-              <!-- Additional Statistics Charts could go here -->
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <div class="card h-100">
+              <!-- Donation & Gift History Section -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="card">
                     <div class="card-header">
                       <h6 class="card-title mb-0">
-                        <i class="fas fa-calendar me-2"></i>
-                        Donation History
+                        <i class="fas fa-table me-2"></i>
+                        Donation & Gift History
                       </h6>
                     </div>
                     <div class="card-body">
-                      <p class="text-muted text-center py-5">Donation history chart will be displayed here</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card h-100">
-                    <div class="card-header">
-                      <h6 class="card-title mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>
-                        Donation Distribution
-                      </h6>
-                    </div>
-                    <div class="card-body">
-                      <p class="text-muted text-center py-5">Donation distribution chart will be displayed here</p>
+                      <!-- Time Period Filter -->
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <div class="btn-group" role="group">
+                            <button type="button" class="btn" 
+                                    [class]="selectedPeriod === '6months' ? 'btn-primary' : 'btn-outline-secondary'"
+                                    (click)="setTimePeriod('6months')">
+                              Last 6 Months
+                            </button>
+                            <button type="button" class="btn" 
+                                    [class]="selectedPeriod === '1year' ? 'btn-primary' : 'btn-outline-secondary'"
+                                    (click)="setTimePeriod('1year')">
+                              Last Year
+                            </button>
+                            <button type="button" class="btn" 
+                                    [class]="selectedPeriod === 'custom' ? 'btn-primary' : 'btn-outline-secondary'"
+                                    (click)="setTimePeriod('custom')">
+                              Custom Range
+                            </button>
+                          </div>
+                        </div>
+                        <div class="col-md-6" *ngIf="selectedPeriod === 'custom'">
+                          <div class="row">
+                            <div class="col-6">
+                              <input type="date" class="form-control form-control-sm" 
+                                     [(ngModel)]="customStartDate" 
+                                     (change)="updateHistoryData()" 
+                                     placeholder="Start Date">
+                            </div>
+                            <div class="col-6">
+                              <input type="date" class="form-control form-control-sm" 
+                                     [(ngModel)]="customEndDate" 
+                                     (change)="updateHistoryData()" 
+                                     placeholder="End Date">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Table View -->
+                        <!-- Search and Sort Controls -->
+                        <div class="row mb-3">
+                          <div class="col-md-6">
+                            <div class="input-group">
+                              <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                              </span>
+                              <input type="text" class="form-control" 
+                                     placeholder="Search donations and gifts..." 
+                                     [(ngModel)]="historySearchTerm" 
+                                     (input)="filterHistoryData()">
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <div class="d-flex gap-2">
+                              <select class="form-select" [(ngModel)]="historySortBy" (change)="sortHistoryData()">
+                                <option value="date">Sort by Date</option>
+                                <option value="amount">Sort by Amount</option>
+                                <option value="type">Sort by Type</option>
+                              </select>
+                              <button class="btn btn-outline-secondary" (click)="toggleSortOrder()">
+                                <i class="fas" [class]="sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- History Table -->
+                        <div class="table-responsive">
+                          <table class="table table-hover">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Fund Type</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let item of filteredHistoryData" 
+                                  [class]="item.type === 'donation' ? 'table-success' : 'table-info'">
+                                <td>{{ formatDate(item.date) }}</td>
+                                <td>
+                                  <span class="badge" 
+                                        [class]="item.type === 'donation' ? 'bg-success' : 'bg-info'">
+                                    <i class="fas" [class]="item.type === 'donation' ? 'fa-donate' : 'fa-gift'"></i>
+                                    {{ item.type | titlecase }}
+                                  </span>
+                                </td>
+                                <td>{{ item.description || 'N/A' }}</td>
+                                <td class="fw-bold">{{ formatCurrency(item.amount) }}</td>
+                                <td>
+                                  <span class="badge bg-secondary">{{ item.fundType || 'General' }}</span>
+                                </td>
+                                <td>
+                                  <span class="badge bg-success">Completed</span>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          
+                          <!-- Empty State -->
+                          <div *ngIf="filteredHistoryData.length === 0" class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No History Found</h5>
+                            <p class="text-muted">No donations or gifts found for the selected period.</p>
+                          </div>
+                        </div>
                     </div>
                   </div>
                 </div>
               </div>
+
             </div>
             <!-- End of Statistics Tab -->
 
@@ -573,10 +687,14 @@
                       <!-- Date -->
                       <div class="col-md-6">
                         <label class="form-label">Gift Date *</label>
-                        <input type="date" class="form-control" formControlName="date" [class.is-invalid]="giftForm.get('date')?.invalid && giftForm.get('date')?.touched">
-                        <div class="invalid-feedback">
-                          Please select a date
-                        </div>
+                        <mat-form-field appearance="outline" class="w-100">
+                          <input matInput [matDatepicker]="giftDatePicker" formControlName="date" placeholder="MM/DD/YYYY">
+                          <mat-datepicker-toggle matSuffix [for]="giftDatePicker"></mat-datepicker-toggle>
+                          <mat-datepicker #giftDatePicker></mat-datepicker>
+                          <mat-error *ngIf="giftForm.get('date')?.invalid && giftForm.get('date')?.touched">
+                            Please select a date
+                          </mat-error>
+                        </mat-form-field>
                       </div>
                       
                       <!-- Beneficiary Type -->
@@ -700,7 +818,7 @@
                           <th>Date</th>
                           <th>Type</th>
                           <th>Amount</th>
-                          <th>Notes</th>
+                          
                           <th class="text-end">Actions</th>
                         </tr>
                       </thead>
@@ -717,7 +835,6 @@
                             </div>
                           </td>
                           <td>{{ formatCurrency(gift.amount) }}</td>
-                          <td>{{ gift.description || 'N/A' }}</td>
                           <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary me-1" (click)="editGift(gift)">
                               <i class="fas fa-edit"></i>
@@ -742,10 +859,183 @@
                   <i class="fas fa-money-bill-wave me-2"></i>
                   Donor Donations
                 </h6>
-                <button class="btn btn-primary btn-sm" (click)="toggleDonationForm()">
-                  <i class="fas fa-plus me-1"></i>
-                  Add Donation
-                </button>
+                <div class="btn-group">
+                  <button class="btn btn-primary btn-sm" (click)="toggleDonationForm()">
+                    <i class="fas fa-plus me-1"></i>
+                    Add Donation
+                  </button>
+                  <button class="btn btn-success btn-sm" (click)="toggleEmailForm()">
+                    <i class="fas fa-envelope me-1"></i>
+                    Email Summary
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Report Buttons -->
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-body text-center">
+                      <h6 class="card-title text-primary">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Yearly Report
+                      </h6>
+                      
+                      <!-- Year Filter Dropdown -->
+                      <div class="form-group mb-3">
+                        <label class="form-label">Select Year:</label>
+                        <select class="form-select" [(ngModel)]="selectedYear">
+                          <option *ngFor="let year of availableYears" [value]="year">{{ year }}</option>
+                        </select>
+                      </div>
+                      
+                      <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary" (click)="previewYearlyDonationReport()" [disabled]="isYearlyEmailLoading">
+                          <i class="fas fa-eye me-1"></i>
+                          Preview
+                        </button>
+                        <button type="button" class="btn btn-primary" (click)="sendYearlyDonationReport()" [disabled]="isYearlyEmailLoading">
+                          <span *ngIf="isYearlyEmailLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                          <i *ngIf="!isYearlyEmailLoading" class="fas fa-paper-plane me-1"></i>
+                          {{ isYearlyEmailLoading ? 'Sending...' : 'Send Email' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-body text-center">
+                      <h6 class="card-title text-success">
+                        <i class="fas fa-calendar me-2"></i>
+                        Monthly Report
+                      </h6>
+                      
+                      <!-- Year Filter Dropdown -->
+                      <div class="form-group mb-2">
+                        <label class="form-label">Select Year:</label>
+                        <select class="form-select" [(ngModel)]="selectedYear">
+                          <option *ngFor="let year of availableYears" [value]="year">{{ year }}</option>
+                        </select>
+                      </div>
+                      
+                      <!-- Month Filter Dropdown -->
+                      <div class="form-group mb-3">
+                        <label class="form-label">Select Month:</label>
+                        <select class="form-select" [(ngModel)]="selectedMonth">
+                          <option *ngFor="let month of availableMonths" [value]="month.value">{{ month.name }}</option>
+                        </select>
+                      </div>
+                      
+                      <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-success" (click)="previewMonthlyDonationReport()" [disabled]="isMonthlyEmailLoading">
+                          <i class="fas fa-eye me-1"></i>
+                          Preview
+                        </button>
+                        <button type="button" class="btn btn-success" (click)="sendMonthlyDonationReport()" [disabled]="isMonthlyEmailLoading">
+                          <span *ngIf="isMonthlyEmailLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                          <i *ngIf="!isMonthlyEmailLoading" class="fas fa-paper-plane me-1"></i>
+                          {{ isMonthlyEmailLoading ? 'Sending...' : 'Send Email' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- No Donations Alert (Global) -->
+              <div class="card mb-3" *ngIf="noDonationsFound">
+                <div class="card-body p-3">
+                  <div class="alert alert-warning border-warning mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>{{ noDonationsMessage }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Custom Date Range Email Form -->
+              <div *ngIf="isEmailFormVisible" class="card mb-3">
+                <div class="card-header bg-warning bg-opacity-10">
+                  <h6 class="card-title mb-0 text-warning">
+                    <i class="fas fa-envelope me-2"></i>
+                    Send Custom Date Range Report
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <form [formGroup]="emailForm" (ngSubmit)="sendDonationSummaryEmail()">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label">Start Date</label>
+                        <mat-form-field appearance="outline" class="w-100">
+                          <input 
+                            matInput 
+                            [matDatepicker]="startDatePicker" 
+                            formControlName="startDate"
+                            placeholder="MM/DD/YYYY"
+                          >
+                          <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+                          <mat-datepicker #startDatePicker></mat-datepicker>
+                          <mat-error *ngIf="emailForm.get('startDate')?.invalid && emailForm.get('startDate')?.touched">
+                            Please select a valid start date
+                          </mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">End Date</label>
+                        <mat-form-field appearance="outline" class="w-100">
+                          <input 
+                            matInput 
+                            [matDatepicker]="endDatePicker" 
+                            formControlName="endDate"
+                            placeholder="MM/DD/YYYY"
+                          >
+                          <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+                          <mat-datepicker #endDatePicker></mat-datepicker>
+                          <mat-error *ngIf="emailForm.get('endDate')?.invalid && emailForm.get('endDate')?.touched">
+                            Please select a valid end date
+                          </mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-12">
+                        <div class="alert alert-info">
+                          <i class="fas fa-info-circle me-2"></i>
+                          This will generate a PDF donation summary for the selected period and email it to: 
+                          <strong>{{ selectedDonorDetail.email }}</strong>
+                        </div>
+                      </div>
+                      
+                      <!-- Alert removed and moved to global position -->
+                      <div class="col-12" *ngIf="emailError">
+                        <div class="alert alert-danger">
+                          <i class="fas fa-exclamation-triangle me-2"></i>
+                          {{ emailError }}
+                        </div>
+                      </div>
+                      <div class="col-12" *ngIf="emailSuccess">
+                        <div class="alert alert-success">
+                          <i class="fas fa-check-circle me-2"></i>
+                          Email sent successfully!
+                        </div>
+                      </div>
+                      
+                      <!-- Form Actions -->
+                      <div class="col-12 text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" (click)="toggleEmailForm()" [disabled]="isEmailLoading">
+                          Cancel
+                        </button>
+                        <button type="button" class="btn btn-outline-warning me-2" (click)="previewDonationSummary()" [disabled]="emailForm.invalid || isEmailLoading">
+                          <i class="fas fa-eye me-1"></i>
+                          Preview PDF
+                        </button>
+                        <button type="submit" class="btn btn-warning" [disabled]="emailForm.invalid || isEmailLoading">
+                          <span *ngIf="isEmailLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                          <i *ngIf="!isEmailLoading" class="fas fa-paper-plane me-2"></i>
+                          {{ isEmailLoading ? 'Sending...' : 'Send Email' }}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
               </div>
 
               <!-- Donation Form -->
@@ -771,10 +1061,14 @@
                       </div>
                       <div class="col-md-6">
                         <label class="form-label">Date *</label>
-                        <input type="date" class="form-control" formControlName="donationDate" [class.is-invalid]="donationForm.get('donationDate')?.invalid && donationForm.get('donationDate')?.touched">
-                        <div class="invalid-feedback">
-                          Please select a date
-                        </div>
+                        <mat-form-field appearance="outline" class="w-100">
+                          <input matInput [matDatepicker]="donationDatePicker" formControlName="donationDate" placeholder="MM/DD/YYYY">
+                          <mat-datepicker-toggle matSuffix [for]="donationDatePicker"></mat-datepicker-toggle>
+                          <mat-datepicker #donationDatePicker></mat-datepicker>
+                          <mat-error *ngIf="donationForm.get('donationDate')?.invalid && donationForm.get('donationDate')?.touched">
+                            Please select a date
+                          </mat-error>
+                        </mat-form-field>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label">Gift Type *</label>
@@ -845,7 +1139,7 @@
                           <th>Gift Type</th>
                           <th>Payment Method</th>
                           <th>Reference</th>
-                          <th>Notes</th>
+                          
                           <th class="text-end">Actions</th>
                         </tr>
                       </thead>
@@ -856,7 +1150,6 @@
                           <td>{{ donation.giftTypeName || 'N/A' }}</td>
                           <td>{{ donation.paymentMethod || 'N/A' }}</td>
                           <td>{{ donation.referenceNumber || ('DON' + donation.id) }}</td>
-                          <td>{{ donation.description || 'N/A' }}</td>
                           <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary me-1" (click)="editDonation(donation)">
                               <i class="fas fa-edit"></i>
@@ -1016,3 +1309,176 @@
   </div>
 <!-- End of donor management container -->
 
+<!-- Advanced Search Modal -->
+<div class="modal fade" [class.show]="isAdvancedSearchModalVisible" [style.display]="isAdvancedSearchModalVisible ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-filter me-2"></i>
+          Advanced Donor Search
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAdvancedSearchModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="advancedSearchForm">
+          <!-- Personal Info Section -->
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">First Name</label>
+                  <input type="text" class="form-control" formControlName="firstName" placeholder="Search by first name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Last Name</label>
+                  <input type="text" class="form-control" formControlName="lastName" placeholder="Search by last name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" formControlName="email" placeholder="Search by email">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Phone</label>
+                  <input type="tel" class="form-control" formControlName="phone" placeholder="Search by phone number">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">City</label>
+                  <input type="text" class="form-control" formControlName="city" placeholder="Search by city">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Country</label>
+                  <input type="text" class="form-control" formControlName="country" placeholder="Search by country">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Donation Info Section -->
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Donation Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Has Donations</label>
+                  <select class="form-select" formControlName="hasDonations">
+                    <option value="">Any</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Donation Amount Range</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="donationAmountFrom" placeholder="From">
+                    <span class="input-group-text">to</span>
+                    <input type="number" class="form-control" formControlName="donationAmountTo" placeholder="To">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Donation Date From</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput [matDatepicker]="donationDateFromPicker" formControlName="donationDateFrom" placeholder="MM/DD/YYYY">
+                    <mat-datepicker-toggle matSuffix [for]="donationDateFromPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #donationDateFromPicker></mat-datepicker>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Donation Date To</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput [matDatepicker]="donationDateToPicker" formControlName="donationDateTo" placeholder="MM/DD/YYYY">
+                    <mat-datepicker-toggle matSuffix [for]="donationDateToPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #donationDateToPicker></mat-datepicker>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sponsorship Info Section -->
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="fas fa-hands-helping me-2"></i>Sponsorship Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Has Active Sponsorships</label>
+                  <select class="form-select" formControlName="hasActiveSponsorships">
+                    <option value="">Any</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Sponsorship Type</label>
+                  <select class="form-select" formControlName="sponsorshipType">
+                    <option value="">Any</option>
+                    <option value="FULL">Full</option>
+                    <option value="PARTIAL">Partial</option>
+                    <option value="EDUCATIONAL">Educational</option>
+                    <option value="HEALTH">Health</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Other Info Section -->
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Other Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Registration Date From</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput [matDatepicker]="registrationDateFromPicker" formControlName="registrationDateFrom" placeholder="MM/DD/YYYY">
+                    <mat-datepicker-toggle matSuffix [for]="registrationDateFromPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #registrationDateFromPicker></mat-datepicker>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Registration Date To</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput [matDatepicker]="registrationDateToPicker" formControlName="registrationDateTo" placeholder="MM/DD/YYYY">
+                    <mat-datepicker-toggle matSuffix [for]="registrationDateToPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #registrationDateToPicker></mat-datepicker>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Donor ID</label>
+                  <input type="text" class="form-control" formControlName="donorId" placeholder="Search by donor ID">
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeAdvancedSearchModal(true)">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-outline-secondary me-2" (click)="resetAdvancedSearch()">
+          <i class="fas fa-undo me-1"></i>
+          Reset
+        </button>
+        <button type="button" class="btn btn-primary" (click)="applyAdvancedSearch()" [disabled]="isAdvancedSearching">
+          <span *ngIf="isAdvancedSearching" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <i *ngIf="!isAdvancedSearching" class="fas fa-filter me-1"></i>
+          {{ isAdvancedSearching ? 'Searching...' : 'Apply Filters' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="isAdvancedSearchModalVisible || isUploadModalVisible"></div>

@@ -139,6 +139,16 @@ export class SponsorshipService {
     return this.http.put<Sponsorship>(`${this.baseUrl}/${id}/cancel`, {}, { headers: this.getAuthHeaders() });
   }
 
+  // Put sponsorship on hold
+  putSponsorshipOnHold(id: number): Observable<Sponsorship> {
+    return this.http.put<Sponsorship>(`${this.baseUrl}/${id}/hold`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  // Reactivate sponsorship from on-hold status
+  reactivateSponsorship(id: number): Observable<Sponsorship> {
+    return this.http.put<Sponsorship>(`${this.baseUrl}/${id}/reactivate`, {}, { headers: this.getAuthHeaders() });
+  }
+
   // Gift management
   createGift(gift: CreateGiftRequest): Observable<Gift> {
     // For Java LocalDate, we need to send the date in ISO format

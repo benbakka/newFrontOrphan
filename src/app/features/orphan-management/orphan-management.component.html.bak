@@ -227,7 +227,7 @@
               <button 
                 class="btn btn-primary"
                 (click)="saveOrphan()"
-                [disabled]="orphanForm.invalid || isLoading"
+                [disabled]="orphanForm.invalid || isLoading || !selectedPhoto"
               >
                 <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                 {{ isLoading ? 'Saving...' : 'Save Orphan' }}
@@ -706,9 +706,6 @@
                                 <span class="badge" [ngClass]="{'bg-info': !sponsorship.isLimited, 'bg-secondary': sponsorship.isLimited}">
                                   {{ sponsorship.isLimited ? 'Limited' : 'Unlimited' }}
                                 </span>
-                                <small *ngIf="sponsorship.isLimited && sponsorship.endDate" class="d-block text-muted">
-                                  Until: {{ formatDate(sponsorship.endDate) }}
-                                </small>
                               </td>
                               <td>${{ sponsorship.amount | number:'1.2-2' }}</td>
                               <td>{{ formatDate(sponsorship.startDate) }}</td>
@@ -902,7 +899,7 @@
                               <th>Date</th>
                               <th>Type</th>
                               <th>Amount</th>
-                              <!-- <th>Notes</th> -->
+                              <th>Notes</th>
                               <th class="text-end">Actions</th>
                             </tr>
                           </thead>
@@ -916,7 +913,7 @@
                                 </div>
                               </td>
                               <td>{{ formatCurrency(gift.amount) }}</td>
-                              <!-- <td>{{ gift.description || 'N/A' }}</td> -->
+                              <td>{{ gift.description || 'N/A' }}</td>
                               <td class="text-end">
                                 <button class="btn btn-sm btn-outline-primary me-1" (click)="editOrphanGift(gift)" [disabled]="isEditingGift">
                                   <i class="fas fa-edit"></i>
@@ -1609,16 +1606,6 @@
                   <label class="form-label">Gift Value *</label>
                   <input type="number" class="form-control" formControlName="giftValue" min="0" step="0.01" required>
                 </div>
-                <div class="col-md-12 mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="addDonorIsLimitedCheckbox" [checked]="!sponsorshipForm.get('isLimited')?.value" (change)="toggleIsLimited()">
-                    <label class="form-check-label" for="addDonorIsLimitedCheckbox">
-                      <i class="fas fa-infinity me-2 text-info"></i>
-                      Unlimited Commitment (no end date)
-                    </label>
-                    <small class="form-text text-muted d-block">Uncheck for limited commitment with end date</small>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1688,16 +1675,6 @@
                     <option value="MONTHLY">Monthly</option>
                     <option value="YEARLY">Yearly</option>
                   </select>
-                </div>
-                <div class="col-md-12 mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="selectDonorIsLimitedCheckbox" [checked]="!sponsorshipForm.get('isLimited')?.value" (change)="toggleIsLimited()">
-                    <label class="form-check-label" for="selectDonorIsLimitedCheckbox">
-                      <i class="fas fa-infinity me-2 text-info"></i>
-                      Unlimited Commitment (no end date)
-                    </label>
-                    <small class="form-text text-muted d-block">Uncheck for limited commitment with end date</small>
-                  </div>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Start Date *</label>
@@ -1966,16 +1943,6 @@
                     <option value="MONTHLY">Monthly</option>
                     <option value="YEARLY">Yearly</option>
                   </select>
-                </div>
-                <div class="col-md-12 mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="editSponsorshipIsLimitedCheckbox" [checked]="!sponsorshipForm.get('isLimited')?.value" (change)="toggleIsLimited()">
-                    <label class="form-check-label" for="editSponsorshipIsLimitedCheckbox">
-                      <i class="fas fa-infinity me-2 text-info"></i>
-                      Unlimited Commitment (no end date)
-                    </label>
-                    <small class="form-text text-muted d-block">Uncheck for limited commitment with end date</small>
-                  </div>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Start Date *</label>

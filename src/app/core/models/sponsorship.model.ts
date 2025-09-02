@@ -8,6 +8,8 @@ export interface Sponsorship {
   status?: string;
   orphanName?: string;
   donorName?: string;
+  giftValue?: number;
+  isLimited?: boolean;
   gifts?: Gift[];
 }
 
@@ -18,12 +20,16 @@ export interface CreateSponsorshipRequest {
   startDate: string;
   endDate?: string;
   giftValue: number;
+  isLimited?: boolean;
 }
 
 export interface UpdateSponsorshipRequest {
+  donorId?: number;
   sponsorshipType?: SponsorshipType;
   startDate?: string;
   endDate?: string;
+  giftValue?: number;
+  isLimited?: boolean;
 }
 
 export enum SponsorshipType {

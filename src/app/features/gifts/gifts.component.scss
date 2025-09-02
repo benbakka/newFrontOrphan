@@ -1,22 +1,140 @@
 .gift-type-card {
   transition: all 0.3s ease;
-  border-width: 2px;
-  
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  }
+  border: 2px solid transparent;
+}
+
+.gift-type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.progress {
+  background-color: #f8f9fa;
 }
 
 .card-title {
   font-size: 0.95rem;
   font-weight: 600;
-  line-height: 1.2;
 }
 
-.progress {
-  border-radius: 10px;
+.small {
+  font-size: 0.75rem;
+}
+
+.fw-bold {
+  font-weight: 600 !important;
+}
+
+// Category Accordion Styles
+.accordion-item {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem !important;
   overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.accordion-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.accordion-button.category-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: none;
+  padding: 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.accordion-button.category-header:not(.collapsed) {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  box-shadow: none;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.accordion-button.category-header:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  border-color: #86b7fe;
+}
+
+.accordion-button.category-header::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+  transition: transform 0.3s ease;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.accordion-button.category-header:not(.collapsed)::after {
+  transform: rotate(180deg);
+}
+
+.category-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-stats {
+  min-width: 300px;
+}
+
+.accordion-body {
+  padding: 2rem;
+  background: #fafbfc;
+}
+
+.accordion-collapse {
+  transition: all 0.3s ease;
+}
+
+// Category-specific colors
+.text-primary { color: #0d6efd !important; }
+.text-info { color: #0dcaf0 !important; }
+.text-success { color: #198754 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-secondary { color: #6c757d !important; }
+.text-danger { color: #dc3545 !important; }
+.text-dark { color: #212529 !important; }
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .category-stats {
+    min-width: auto;
+    margin-top: 1rem;
+  }
+  
+  .accordion-button.category-header {
+    padding: 1rem;
+  }
+  
+  .category-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .category-icon i {
+    font-size: 1.5rem !important;
+  }
+  
+  .accordion-body {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .category-stats .row {
+    margin-top: 0.5rem;
+  }
 }
 
 .progress-bar {

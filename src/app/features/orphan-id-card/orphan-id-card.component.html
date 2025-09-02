@@ -28,13 +28,17 @@
           <i class="fas fa-arrow-left me-2"></i>
           Back to List
         </button>
-        <button class="btn btn-info me-2" (click)="printCard()">
+        <!-- <button class="btn btn-info me-2" (click)="printCard()">
           <i class="fas fa-print me-2"></i>
           Print Card
-        </button>
-        <button class="btn btn-success" (click)="downloadCard()">
+        </button> -->
+        <!-- <button class="btn btn-success me-2" (click)="downloadCard()">
           <i class="fas fa-download me-2"></i>
           Download PDF
+        </button> -->
+        <button class="btn btn-primary" (click)="openSendCardModal()">
+          <i class="fas fa-envelope me-2"></i>
+          Send Card
         </button>
       </div>
       
@@ -183,7 +187,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="card-footer">
+      <!-- <div class="card-footer">
         <div class="footer-info">
           <p class="issue-date">
             <strong>Issue Date:</strong> {{ formatDate(issueDate) }}
@@ -197,8 +201,139 @@
             <p>Authorized Signature</p>
           </div>
         </div>
+      </div> -->
+    </div>
+
+    <!-- Send Card Modal -->
+    <div class="modal fade" [class.show]="showSendCardModal" [style.display]="showSendCardModal ? 'block' : 'none'" 
+         tabindex="-1" role="dialog" aria-labelledby="sendCardModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="sendCardModalLabel">
+              <i class="fas fa-envelope me-2"></i>
+              Send Orphan ID Card
+            </h5>
+            <button type="button" class="btn-close" (click)="closeSendCardModal()" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Template Selection -->
+            <div class="mb-4">
+              <h6 class="mb-3">
+                <i class="fas fa-id-card me-2"></i>
+                Select Card Template
+              </h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="template" id="template1" 
+                           value="template1" [(ngModel)]="selectedTemplate">
+                    <label class="form-check-label" for="template1">
+                      <strong>Template 1</strong> - Professional Blue Design
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="template" id="template2" 
+                           value="template2" [(ngModel)]="selectedTemplate">
+                    <label class="form-check-label" for="template2">
+                      <strong>Template 2</strong> - Modern Pink Design
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recipient Selection -->
+            <div class="mb-4">
+              <h6 class="mb-3">
+                <i class="fas fa-user me-2"></i>
+                Select Recipient
+              </h6>
+              
+              <!-- Sponsor Option -->
+              <div class="form-check mb-3" *ngIf="currentSponsorship">
+                <input class="form-check-input" type="radio" name="recipient" id="sponsor" 
+                       value="sponsor" [(ngModel)]="recipientType">
+                <label class="form-check-label" for="sponsor">
+                  <strong>Current Sponsor:</strong> {{ getCurrentSponsorName() }}
+                </label>
+              </div>
+
+              <!-- Other Donor Option -->
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="radio" name="recipient" id="donor" 
+                       value="donor" [(ngModel)]="recipientType">
+                <label class="form-check-label" for="donor">
+                  <strong>Select Donor</strong>
+                </label>
+              </div>
+              
+              <!-- Donor Selection Dropdown -->
+              <div class="ms-4 mb-3" *ngIf="recipientType === 'donor'">
+                <select class="form-select" [(ngModel)]="selectedDonorId">
+                  <option value="0">Choose a donor...</option>
+                  <option *ngFor="let donor of getAvailableDonors()" [value]="donor.id">
+                    {{ donor.firstName }} {{ donor.lastName }} ({{ donor.email }})
+                  </option>
+                </select>
+              </div>
+
+              <!-- Custom Email Option -->
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="radio" name="recipient" id="custom" 
+                       value="custom" [(ngModel)]="recipientType">
+                <label class="form-check-label" for="custom">
+                  <strong>Custom Email Address</strong>
+                </label>
+              </div>
+              
+              <!-- Custom Email Fields -->
+              <div class="ms-4" *ngIf="recipientType === 'custom'">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="customName" class="form-label">Recipient Name</label>
+                    <input type="text" class="form-control" id="customName" 
+                           [(ngModel)]="customName" placeholder="Enter recipient name">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="customEmail" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="customEmail" 
+                           [(ngModel)]="customEmail" placeholder="Enter email address">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Information -->
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Card Details:</strong> {{ orphan.firstName }} {{ orphan.lastName }} - 
+              Template {{ selectedTemplate === 'template1' ? '1' : '2' }}
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeSendCardModal()" 
+                    [disabled]="isSendingCard">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" (click)="sendCard()" 
+                    [disabled]="isSendingCard || 
+                               (recipientType === 'sponsor' && !currentSponsorship) ||
+                               (recipientType === 'donor' && selectedDonorId === 0) ||
+                               (recipientType === 'custom' && (!customEmail || !customName))">
+              <span *ngIf="isSendingCard" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              <i *ngIf="!isSendingCard" class="fas fa-paper-plane me-2"></i>
+              {{ isSendingCard ? 'Sending...' : 'Send Card' }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- Modal Backdrop -->
+    <div class="modal-backdrop fade" [class.show]="showSendCardModal" *ngIf="showSendCardModal"></div>
    
 </div>

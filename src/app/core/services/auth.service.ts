@@ -17,12 +17,24 @@ export class AuthService {
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
-    // Check if user is already logged in
+    // Check if user is already logged in on page load
+    this.initializeAuthState();
+  }
+
+  private initializeAuthState(): void {
     const token = this.getToken();
-    if (token) {
-      // You might want to validate the token here
+    if (token && this.isLoggedIn()) {
       const user = this.getUserFromToken(token);
-      this.currentUserSubject.next(user);
+      if (user && user.id) {
+        console.log('Restoring user from token:', user);
+        this.currentUserSubject.next(user);
+      } else {
+        console.log('Invalid user data in token, logging out');
+        this.logout();
+      }
+    } else {
+      console.log('No valid token found, user not logged in');
+      this.logout();
     }
   }
 
@@ -81,13 +93,28 @@ export class AuthService {
   private getUserFromToken(token: string): User | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('JWT Payload:', payload); // Debug log to see available fields
+      
+      // Extract user ID from the userId claim we added in backend
+      let userId = payload.userId || payload.id || payload.user_id;
+      
+      // If no numeric ID found, try to get it from username by making API call
+      if (!userId || userId === payload.sub) {
+        console.warn('No numeric user ID found in JWT token, will need to fetch from API');
+        // For now, we'll handle this in the permission service
+        userId = null;
+      }
+      
+      console.log('Extracted User ID:', userId);
+      
       return {
-        id: payload.id,
-        username: payload.sub,
+        id: userId,
+        username: payload.sub || payload.username || payload.user_name,
         email: payload.email,
-        roles: payload.roles || []
+        roles: payload.roles || payload.authorities || []
       };
-    } catch {
+    } catch (error) {
+      console.error('Error parsing JWT token:', error);
       return null;
     }
   }

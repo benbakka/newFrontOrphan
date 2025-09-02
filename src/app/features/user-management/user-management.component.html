@@ -1,0 +1,369 @@
+<!-- User Management Header -->
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-white text-dark d-flex justify-content-between align-items-center py-3 border-bottom">
+          <h4 class="mb-0 fw-bold text-primary">
+            <i class="fas fa-users me-3"></i>User Management
+          </h4>
+          <button class="btn btn-primary shadow-sm" (click)="openCreateUserModal()">
+            <i class="fas fa-plus me-2"></i>Add New User
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        @if (successMessage || errorMessage) {
+          <div class="card-body">
+            @if (successMessage) {
+              <div class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle me-2"></i>{{ successMessage }}
+                <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+              </div>
+            }
+            @if (errorMessage) {
+              <div class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ errorMessage }}
+                <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Search and Filter -->
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Search by username, email, or role..."
+                  [(ngModel)]="searchTerm"
+                  (input)="onSearchChange()"
+                />
+                <button class="btn btn-outline-secondary" type="button" (click)="clearSearch()" *ngIf="searchTerm">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+            <div class="col-md-6 text-end">
+              <span class="text-muted">
+                Showing {{ paginatedUsers.length }} of {{ totalUsers }} users
+              </span>
+            </div>
+          </div>
+
+          <!-- Users Table -->
+          <div class="table-responsive border rounded">
+            <table class="table table-hover mb-0 bg-white">
+              <thead class="bg-white border-bottom">
+                <tr>
+                  <th class="py-3 px-4 text-muted fw-semibold"><i class="fas fa-hashtag me-2"></i>ID</th>
+                  <th class="py-3 px-4 text-muted fw-semibold"><i class="fas fa-user me-2"></i>USERNAME</th>
+                  <th class="py-3 px-4 text-muted fw-semibold"><i class="fas fa-envelope me-2"></i>EMAIL</th>
+                  <th class="py-3 px-4 text-muted fw-semibold"><i class="fas fa-shield-alt me-2"></i>ROLE</th>
+                  <th class="py-3 px-4 text-muted fw-semibold"><i class="fas fa-cogs me-2"></i>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of paginatedUsers" [class.table-active]="selectedUser?.id === user.id" class="border-bottom">
+                  <td class="py-4 px-4 fw-bold text-primary">{{ user.id }}</td>
+                  <td class="py-4 px-4">
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-circle-simple me-3">
+                        <i class="fas fa-user"></i>
+                      </div>
+                      <span class="fw-semibold text-dark">{{ user.username }}</span>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-muted">{{ user.email }}</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="badge-simple" 
+                          [class.badge-admin]="user.role === 'ROLE_ADMIN'"
+                          [class.badge-user]="user.role === 'ROLE_USER'"
+                          [class.badge-viewer]="user.role === 'ROLE_VIEWER'">
+                      {{ getRoleLabel(user.role) }}
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="btn-group-simple" role="group">
+                      <button class="btn btn-sm btn-outline-primary me-1" 
+                              (click)="openEditUserModal(user)"
+                              title="Edit User">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-info me-1" 
+                              (click)="openPermissionModal(user)"
+                              title="Manage Permissions">
+                        <i class="fas fa-key"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" 
+                              (click)="openDeleteConfirm(user)"
+                              title="Delete User">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Loading State -->
+            <div class="text-center py-4" *ngIf="isLoading">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="mt-2 text-muted">Loading users...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div class="text-center py-4" *ngIf="!isLoading && filteredUsers.length === 0">
+              <i class="fas fa-users fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">No users found</h5>
+              <p class="text-muted">
+                <span *ngIf="searchTerm">No users match your search criteria.</span>
+                <span *ngIf="!searchTerm">There are no users in the system.</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <nav *ngIf="totalPages > 1">
+            <ul class="pagination justify-content-center">
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <button class="page-link" (click)="changePage(currentPage - 1)">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+              </li>
+              <li class="page-item" 
+                  *ngFor="let page of [].constructor(totalPages); let i = index"
+                  [class.active]="currentPage === i + 1">
+                <button class="page-link" (click)="changePage(i + 1)">{{ i + 1 }}</button>
+              </li>
+              <li class="page-item" [class.disabled]="currentPage === totalPages">
+                <button class="page-link" (click)="changePage(currentPage + 1)">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- User Create/Edit Modal -->
+<div class="modal fade show" 
+     [style.display]="isUserModalVisible ? 'block' : 'none'"
+     [class.show]="isUserModalVisible"
+     tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user me-2"></i>
+          {{ isEditMode ? 'Edit User' : 'Create New User' }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeUserModal()"></button>
+      </div>
+      <form [formGroup]="userForm" (ngSubmit)="submitUser()">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="username" class="form-label">Username *</label>
+                <input
+                  type="text"
+                  id="username"
+                  class="form-control"
+                  formControlName="username"
+                  [class.is-invalid]="userForm.get('username')?.invalid && userForm.get('username')?.touched"
+                />
+                <div class="invalid-feedback" *ngIf="userForm.get('username')?.invalid && userForm.get('username')?.touched">
+                  <div *ngIf="userForm.get('username')?.errors?.['required']">Username is required</div>
+                  <div *ngIf="userForm.get('username')?.errors?.['minlength']">Username must be at least 3 characters</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="email" class="form-label">Email *</label>
+                <input
+                  type="email"
+                  id="email"
+                  class="form-control"
+                  formControlName="email"
+                  [class.is-invalid]="userForm.get('email')?.invalid && userForm.get('email')?.touched"
+                />
+                <div class="invalid-feedback" *ngIf="userForm.get('email')?.invalid && userForm.get('email')?.touched">
+                  <div *ngIf="userForm.get('email')?.errors?.['required']">Email is required</div>
+                  <div *ngIf="userForm.get('email')?.errors?.['email']">Please enter a valid email</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="password" class="form-label">
+                  Password {{ isEditMode ? '(leave blank to keep current)' : '*' }}
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  class="form-control"
+                  formControlName="password"
+                  [class.is-invalid]="userForm.get('password')?.invalid && userForm.get('password')?.touched"
+                />
+                <div class="invalid-feedback" *ngIf="userForm.get('password')?.invalid && userForm.get('password')?.touched">
+                  <div *ngIf="userForm.get('password')?.errors?.['required']">Password is required</div>
+                  <div *ngIf="userForm.get('password')?.errors?.['minlength']">Password must be at least 6 characters</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="role" class="form-label">Role *</label>
+                <select
+                  id="role"
+                  class="form-select"
+                  formControlName="role"
+                  [class.is-invalid]="userForm.get('role')?.invalid && userForm.get('role')?.touched"
+                >
+                  <option value="">Select a role</option>
+                  <option *ngFor="let role of userRoles" [value]="role.value">
+                    {{ role.label }}
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="userForm.get('role')?.invalid && userForm.get('role')?.touched">
+                  Role is required
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeUserModal()">
+            <i class="fas fa-times me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="!userForm.valid || isLoading">
+            <i class="fas fa-spinner fa-spin me-2" *ngIf="isLoading"></i>
+            <i class="fas fa-save me-2" *ngIf="!isLoading"></i>
+            {{ isEditMode ? 'Update User' : 'Create User' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Permission Management Modal -->
+<div class="modal fade show" 
+     [style.display]="isPermissionModalVisible ? 'block' : 'none'"
+     [class.show]="isPermissionModalVisible"
+     tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-key me-2"></i>
+          Manage Permissions - {{ selectedUser?.username }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closePermissionModal()"></button>
+      </div>
+      <form [formGroup]="permissionForm" (ngSubmit)="submitPermissions()">
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Configure which pages this user can access. Unchecked routes will be restricted.
+          </div>
+          
+          <div class="row">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Page Access Permissions</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6" *ngFor="let route of availableRoutes">
+                      <div class="form-check mb-3">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          [id]="'permission-' + route.route"
+                          [formControlName]="route.route"
+                        />
+                        <label class="form-check-label" [for]="'permission-' + route.route">
+                          <strong>{{ route.name }}</strong>
+                          <br>
+                          <small class="text-muted">{{ route.description }}</small>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closePermissionModal()">
+            <i class="fas fa-times me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isLoading">
+            <i class="fas fa-spinner fa-spin me-2" *ngIf="isLoading"></i>
+            <i class="fas fa-save me-2" *ngIf="!isLoading"></i>
+            Update Permissions
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade show" 
+     [style.display]="isDeleteConfirmVisible ? 'block' : 'none'"
+     [class.show]="isDeleteConfirmVisible"
+     tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDeleteConfirm()"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the user <strong>{{ userToDelete?.username }}</strong>?</p>
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          This action cannot be undone. All user data and permissions will be permanently removed.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDeleteConfirm()">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmDelete()" [disabled]="isLoading">
+          <i class="fas fa-spinner fa-spin me-2" *ngIf="isLoading"></i>
+          <i class="fas fa-trash me-2" *ngIf="!isLoading"></i>
+          Delete User
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" 
+     *ngIf="isUserModalVisible || isPermissionModalVisible || isDeleteConfirmVisible">
+</div>

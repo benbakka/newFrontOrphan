@@ -30,7 +30,7 @@ export interface CreateGiftRequest {
 
 // Updated gift creation request for new system
 export interface CreateGiftRequestV2 {
-  donorId: number;
+  donorId?: number; // Optional - not required for orphan gifts without a donor
   giftTypeId: number;
   amount: number;
   giftName: string;

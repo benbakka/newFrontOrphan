@@ -7,6 +7,17 @@ import { GiftType } from '../../core/models/gift-type.model';
 import { Donation } from '../../core/models/donation.model';
 import { Gift } from '../../core/models/gift.model';
 
+export interface GiftTypeCategory {
+  name: string;
+  icon: string;
+  color: string;
+  giftTypes: GiftType[];
+  isExpanded: boolean;
+  totalDonations: number;
+  totalExpenses: number;
+  balance: number;
+}
+
 @Component({
   selector: 'app-gifts',
   standalone: true,
@@ -14,8 +25,10 @@ import { Gift } from '../../core/models/gift.model';
   templateUrl: './gifts.component.html',
   styleUrls: ['./gifts.component.scss']
 })
+
 export class GiftsComponent implements OnInit {
   giftTypes: GiftType[] = [];
+  categories: GiftTypeCategory[] = [];
   selectedGiftType: GiftType | null = null;
   donations: Donation[] = [];
   expenses: Gift[] = [];
@@ -31,6 +44,40 @@ export class GiftsComponent implements OnInit {
   totalExpenses: number = 0;
   activeGiftTypes: number = 0;
 
+  // Category mapping configuration
+  private categoryMappings = {
+    'Orphan': {
+      keywords: ['orphan', 'sponsorship', 'eid', 'school', 'medical', 'general gift'],
+      icon: 'fas fa-child',
+      color: 'primary'
+    },
+    'WASH': {
+      keywords: ['water', 'well', 'wash', 'latrine', 'drinkwater', 'handpump', 'electrical pump', 'solar panel', 'artesian'],
+      icon: 'fas fa-tint',
+      color: 'info'
+    },
+    'Education': {
+      keywords: ['education', 'school', 'learning', 'books', 'scholarship', 'teacher'],
+      icon: 'fas fa-graduation-cap',
+      color: 'success'
+    },
+    'Zakat': {
+      keywords: ['zakat', 'zakah'],
+      icon: 'fas fa-hand-holding-heart',
+      color: 'warning'
+    },
+    'Ramadan': {
+      keywords: ['ramadan', 'iftar', 'suhoor', 'breaking fast'],
+      icon: 'fas fa-moon',
+      color: 'secondary'
+    },
+    'Udhiyah': {
+      keywords: ['udhiyah', 'qurbani', 'sacrifice', 'eid al-adha'],
+      icon: 'fas fa-sheep',
+      color: 'danger'
+    }
+  };
+
   constructor(private giftTypeService: GiftTypeService) {}
 
   ngOnInit(): void {
@@ -44,6 +91,7 @@ export class GiftsComponent implements OnInit {
     this.giftTypeService.getAllGiftTypesWithBalances().subscribe({
       next: (giftTypes) => {
         this.giftTypes = giftTypes.filter(gt => gt.isActive);
+        this.organizeIntoCategories();
         this.calculateSummaryStats();
         this.isLoading = false;
       },
@@ -146,6 +194,69 @@ export class GiftsComponent implements OnInit {
     if (balance > 1000) return 'fas fa-arrow-up';
     if (balance > 100) return 'fas fa-minus';
     return 'fas fa-arrow-down';
+  }
+
+  organizeIntoCategories(): void {
+    // Initialize categories
+    this.categories = Object.keys(this.categoryMappings).map(categoryName => ({
+      name: categoryName,
+      icon: this.categoryMappings[categoryName as keyof typeof this.categoryMappings].icon,
+      color: this.categoryMappings[categoryName as keyof typeof this.categoryMappings].color,
+      giftTypes: [],
+      isExpanded: false,
+      totalDonations: 0,
+      totalExpenses: 0,
+      balance: 0
+    }));
+
+    // Add "Other" category for unmatched gift types
+    this.categories.push({
+      name: 'Other',
+      icon: 'fas fa-ellipsis-h',
+      color: 'dark',
+      giftTypes: [],
+      isExpanded: false,
+      totalDonations: 0,
+      totalExpenses: 0,
+      balance: 0
+    });
+
+    // Categorize gift types
+    this.giftTypes.forEach(giftType => {
+      let categorized = false;
+      
+      for (const category of this.categories) {
+        if (category.name === 'Other') continue;
+        
+        const mapping = this.categoryMappings[category.name as keyof typeof this.categoryMappings];
+        const giftTypeName = giftType.name.toLowerCase();
+        
+        if (mapping.keywords.some(keyword => giftTypeName.includes(keyword.toLowerCase()))) {
+          category.giftTypes.push(giftType);
+          category.totalDonations += giftType.totalDonations || 0;
+          category.totalExpenses += giftType.totalExpenses || 0;
+          category.balance += giftType.balance || 0;
+          categorized = true;
+          break;
+        }
+      }
+      
+      // If not categorized, add to "Other"
+      if (!categorized) {
+        const otherCategory = this.categories.find(c => c.name === 'Other')!;
+        otherCategory.giftTypes.push(giftType);
+        otherCategory.totalDonations += giftType.totalDonations || 0;
+        otherCategory.totalExpenses += giftType.totalExpenses || 0;
+        otherCategory.balance += giftType.balance || 0;
+      }
+    });
+
+    // Remove empty categories
+    this.categories = this.categories.filter(category => category.giftTypes.length > 0);
+  }
+
+  toggleCategory(category: GiftTypeCategory): void {
+    category.isExpanded = !category.isExpanded;
   }
 
   refresh(): void {

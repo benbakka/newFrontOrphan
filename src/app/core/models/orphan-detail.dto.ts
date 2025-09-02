@@ -39,6 +39,7 @@ export interface SponsorshipInfo {
   startDate: string;
   endDate?: string;
   gifts?: GiftInfo[];
+  isLimited?: boolean;
 }
 
 export interface GiftInfo {

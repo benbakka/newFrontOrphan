@@ -1,0 +1,277 @@
+<div class="reports-container">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+      <i class="fas fa-chart-bar me-2"></i>
+      System Reports
+    </h2>
+    <div class="d-flex gap-2">
+      <button class="btn btn-success" (click)="exportToExcel()" [disabled]="isLoading">
+        <i class="fas fa-file-excel me-1"></i>
+        Export Excel
+      </button>
+      <button class="btn btn-danger" (click)="exportToPDF()" [disabled]="isLoading">
+        <i class="fas fa-file-pdf me-1"></i>
+        Export PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3">Loading report data...</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div *ngIf="!isLoading" class="row mb-4">
+    <!-- Total Orphans Card -->
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="stat-card stat-card-primary">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ statistics.totalOrphans }}</h3>
+              <p class="stat-label">Total Orphans</p>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-child"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Donors Card -->
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="stat-card stat-card-success">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ statistics.totalDonors }}</h3>
+              <p class="stat-label">Total Donors</p>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-users"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Sponsorships Card -->
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="stat-card stat-card-warning">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ statistics.activeSponsorships }}</h3>
+              <p class="stat-label">Active Sponsorships</p>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-handshake"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Donations Card -->
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="stat-card stat-card-info">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ formatCurrency(statistics.totalDonationAmount) }}</h3>
+              <p class="stat-label">Total Donations</p>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-gift"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Statistics Row -->
+  <div *ngIf="!isLoading" class="row mb-4">
+    <!-- Sponsored Orphans Card -->
+    <div class="col-lg-4 col-md-6 mb-3">
+      <div class="stat-card stat-card-success-light">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ statistics.sponsoredOrphans }}</h3>
+              <p class="stat-label">Sponsored Orphans</p>
+              <small class="text-muted">{{ getPercentage(statistics.sponsoredOrphans, statistics.totalOrphans) }}% of total</small>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-heart"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Non-Sponsored Orphans Card -->
+    <div class="col-lg-4 col-md-6 mb-3">
+      <div class="stat-card stat-card-danger-light">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ statistics.nonSponsoredOrphans }}</h3>
+              <p class="stat-label">Non-Sponsored Orphans</p>
+              <small class="text-muted">{{ getPercentage(statistics.nonSponsoredOrphans, statistics.totalOrphans) }}% of total</small>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-heart-broken"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sponsorship Rate Card -->
+    <div class="col-lg-4 col-md-12 mb-3">
+      <div class="stat-card stat-card-purple">
+        <div class="stat-card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="stat-number">{{ getPercentage(statistics.sponsoredOrphans, statistics.totalOrphans) }}%</h3>
+              <p class="stat-label">Sponsorship Rate</p>
+              <small class="text-muted">Overall coverage</small>
+            </div>
+            <div class="stat-icon">
+              <i class="fas fa-percentage"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div *ngIf="!isLoading" class="row">
+    <!-- Sponsorship Distribution Chart -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-chart-pie me-2"></i>
+            Sponsorship Distribution
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="sponsorshipChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Donations Chart -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-chart-bar me-2"></i>
+            Monthly Donations
+          </h5>
+          <div class="d-flex align-items-center">
+            <label for="yearSelect" class="form-label me-2 mb-0">Year:</label>
+            <select id="yearSelect" class="form-select form-select-sm" 
+                    [(ngModel)]="selectedYear" (change)="onYearChange()" style="width: auto;">
+              <option *ngFor="let year of availableYears" [value]="year">{{ year }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="donationChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Tables -->
+  <div *ngIf="!isLoading" class="row">
+    <!-- Monthly Donations Summary -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-calendar-alt me-2"></i>
+            Monthly Summary - {{ selectedYear }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th class="text-end">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of statistics.monthlyDonations | keyvalue">
+                  <td *ngIf="item.key.includes(selectedYear.toString())">
+                    {{ item.key.replace(' ' + selectedYear, '') }}
+                  </td>
+                  <td *ngIf="item.key.includes(selectedYear.toString())" class="text-end">
+                    {{ formatCurrency(item.value) }}
+                  </td>
+                </tr>
+                <tr *ngIf="(statistics.monthlyDonations | keyvalue).length === 0">
+                  <td colspan="2" class="text-center text-muted">No donations found for {{ selectedYear }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yearly Donations Summary -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-chart-line me-2"></i>
+            Yearly Summary
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th class="text-end">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of statistics.yearlyDonations | keyvalue">
+                  <td>{{ item.key }}</td>
+                  <td class="text-end">{{ formatCurrency(item.value) }}</td>
+                </tr>
+                <tr *ngIf="(statistics.yearlyDonations | keyvalue).length === 0">
+                  <td colspan="2" class="text-center text-muted">No yearly data available</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div *ngIf="!isLoading" class="text-center mt-4 text-muted">
+    <small>Report generated on {{ currentDate | date:'medium' }}</small>
+  </div>
+</div>

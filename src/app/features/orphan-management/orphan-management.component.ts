@@ -31,6 +31,7 @@ import { OrphanDocumentService } from '../../core/services/orphan-document.servi
 import { OrphanDocument } from '../../shared/models/orphan-document.model';
 import { DocumentUploadComponent } from '../../shared/components/document-upload/document-upload.component';
 import { environment } from '../../../environments/environment';
+import { Subscription, Subject } from 'rxjs';
 
 @Component({
   selector: 'app-orphan-management',
@@ -54,7 +55,7 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./orphan-management.component.scss']
 })
 export class OrphanManagementComponent implements OnInit {
-  // Data properties
+  // Orphan list properties
   orphansList: OrphanListDTO[] = [];
   selectedOrphan: OrphanDetailDTO | null = null;
   isLoading = false;
@@ -64,7 +65,7 @@ export class OrphanManagementComponent implements OnInit {
   // Form instances
   orphanForm: FormGroup;
   giftForm: FormGroup;
-  sponsorshipGiftForm: FormGroup;
+  orphanGiftForm: FormGroup;
   selectedPhoto: File | null = null;
   photoPreview: string | null = null;
 
@@ -106,7 +107,7 @@ export class OrphanManagementComponent implements OnInit {
   isSubmittingGift = false;
   
   // Sponsorship-based gift properties
-  isSponsorshipGiftModalVisible = false;
+  isGiftFormModalVisible = false;
   selectedOrphanForGift: OrphanListDTO | null = null;
   GiftType = GiftType;
   KafalaFrequency = KafalaFrequency;
@@ -124,6 +125,7 @@ export class OrphanManagementComponent implements OnInit {
   isAdvancedSearchModalVisible = false;
   advancedSearchForm: FormGroup;
   isAdvancedSearching = false;
+  isAdvancedSearchApplied = false;
 
   // Document management properties
   showDocumentUpload = false;
@@ -151,7 +153,7 @@ export class OrphanManagementComponent implements OnInit {
   ) { 
     this.orphanForm = this.createOrphanForm();
     this.giftForm = this.createGiftForm();
-    this.sponsorshipGiftForm = this.createSponsorshipGiftForm();
+    this.orphanGiftForm = this.createSponsorshipGiftForm();
     this.donorForm = this.createDonorForm();
     this.sponsorshipForm = this.createSponsorshipForm();
     this.advancedSearchForm = this.createAdvancedSearchForm();
@@ -162,6 +164,30 @@ export class OrphanManagementComponent implements OnInit {
     this.loadGiftTypes();
     this.loadProjects();
     this.setupDateFormatting();
+    this.fetchSystemDonor();
+  }
+  
+  // Fetch a system donor to use for non-sponsored gifts
+  fetchSystemDonor(): void {
+    this.donorService.getDonors().subscribe({
+      next: (donors: Donor[]) => {
+        // Look for a donor with ID 1 (system donor)
+        const systemDonor = donors.find(donor => donor.id === 1);
+        if (systemDonor) {
+          this.donors = donors;
+          console.log('System donor found:', systemDonor);
+        } else if (donors.length > 0) {
+          // If no donor with ID 1, use the first donor in the list
+          this.donors = donors;
+          console.log('Using first donor as system donor:', donors[0]);
+        } else {
+          console.error('No donors found in the system');
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching donors:', error);
+      }
+    });
   }
   
   // Set up date formatting for US format (MM/dd/yyyy)
@@ -264,8 +290,15 @@ export class OrphanManagementComponent implements OnInit {
     this.isAdvancedSearching = true;
     this.orphanService.advancedSearchOrphans(searchRequest).subscribe({
       next: (orphans) => {
+        if (orphans.length === 0) {
+          this.showMessage('No orphans found matching your search criteria', 'info');
+        } else {
+          this.showMessage(`Found ${orphans.length} orphans matching your criteria`, 'success');
+        }
+        
         this.orphansList = orphans;
         this.isAdvancedSearching = false;
+        this.isAdvancedSearchApplied = true;
         this.closeAdvancedSearchModal();
         // Disable pagination when using advanced search
         this.hasMoreData = false;
@@ -274,6 +307,7 @@ export class OrphanManagementComponent implements OnInit {
       error: (error) => {
         console.error('Error in advanced search:', error);
         this.isAdvancedSearching = false;
+        this.showMessage('An error occurred while searching', 'error');
       }
     });
   }
@@ -301,6 +335,12 @@ export class OrphanManagementComponent implements OnInit {
       guardianName: '',
       orphanId: ''
     });
+  }
+
+  clearAdvancedSearch(): void {
+    this.isAdvancedSearchApplied = false;
+    this.resetAdvancedSearch();
+    this.loadOrphansList();
   }
 
   private convertFormDataToSearchRequest(formData: AdvancedSearchFormData): AdvancedSearchRequest {
@@ -373,6 +413,16 @@ export class OrphanManagementComponent implements OnInit {
     });
   }
 
+  // Helper method to show messages to the user
+  private showMessage(message: string, type: 'success' | 'error' | 'info' | 'warning'): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      panelClass: [`snackbar-${type}`],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
+  }
+
   // Fallback method to load all orphans if pagination fails
   private loadAllOrphans(): void {
     this.orphanService.getAllOrphans().subscribe({
@@ -436,15 +486,19 @@ export class OrphanManagementComponent implements OnInit {
     const formattedDate = today.toISOString().split('T')[0];
     
     return this.fb.group({
-      donorId: ['', Validators.required],
-      giftTypeId: [null, Validators.required],
+      // Fields used in the edit form
+      giftName: ['', Validators.required],
+      giftValue: ['', [Validators.required, Validators.min(0.01)]],
+      giftDate: [formattedDate, Validators.required],
+      description: [''],
+      
+      // Keep these fields for compatibility with other methods
+      donorId: [''],
+      giftTypeId: [null],
       customGiftTypeName: [''],
-      amount: ['', [Validators.required, Validators.min(0.01)]],
-      date: [formattedDate, Validators.required],
-      beneficiaryType: [BeneficiaryType.CHARITY, Validators.required],
+      beneficiaryType: [BeneficiaryType.CHARITY],
       orphanId: [null],
-      projectId: [null],
-      description: ['']
+      projectId: [null]
     });
   }
 
@@ -465,8 +519,9 @@ export class OrphanManagementComponent implements OnInit {
   createDonorForm(): FormGroup {
     return this.fb.group({
       donorId: ['', Validators.required],
-      name: ['', Validators.required],
-      email: ['', [Validators.email]],
+      firstName: ['', Validators.required],
+      lastName: ['', Validators.required],
+      email: [''],
       phone: [''],
       address: [''],
       city: [''],
@@ -481,13 +536,66 @@ export class OrphanManagementComponent implements OnInit {
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
     
-    return this.fb.group({
-      donorId: ['', Validators.required],
+    const form = this.fb.group({
+      donorId: [''],
       sponsorshipType: ['MONTHLY', Validators.required],
       startDate: [formattedDate, Validators.required],
       endDate: [''],
-      giftValue: [0, [Validators.required, Validators.min(0.01)]]
+      giftValue: [0, [Validators.required, Validators.min(0.01)]],
+      isLimited: [true] // Default to limited commitment
     });
+    
+    // Set up a listener to update endDate validators when isLimited changes
+    form.get('isLimited')?.valueChanges.subscribe(isLimited => {
+      // Ensure isLimited is treated as boolean
+      this.updateEndDateValidation(form, isLimited === true);
+    });
+    
+    // Initialize validators based on default isLimited value
+    this.updateEndDateValidation(form, true);
+    
+    return form;
+  }
+  
+  // Helper method to update endDate validation based on isLimited value
+  private updateEndDateValidation(form: FormGroup, isLimited: boolean): void {
+    const endDateControl = form.get('endDate');
+    
+    if (isLimited) {
+      // If limited commitment, endDate is required
+      endDateControl?.setValidators([Validators.required]);
+    } else {
+      // If unlimited commitment, endDate is not required
+      endDateControl?.clearValidators();
+      // Clear the endDate value when switching to unlimited
+      endDateControl?.setValue('');
+    }
+    
+    // Update the control's validation status
+    endDateControl?.updateValueAndValidity();
+  }
+  
+  // Toggle isLimited field value
+  toggleIsLimited(): void {
+    const currentValue = this.sponsorshipForm.get('isLimited')?.value;
+    this.sponsorshipForm.patchValue({ isLimited: !currentValue });
+    this.updateEndDateValidation(this.sponsorshipForm, !currentValue);
+  }
+
+  // Determine if a sponsorship is limited or unlimited
+  isSponsorshipLimited(sponsorship: any): boolean {
+    // If isLimited is explicitly set as a boolean, use that value
+    if (typeof sponsorship.isLimited === 'boolean') {
+      return sponsorship.isLimited;
+    }
+    
+    // If isLimited is set as a number (from database), convert to boolean (1 = true, 0 = false)
+    if (sponsorship.isLimited !== undefined) {
+      return sponsorship.isLimited === 1 || sponsorship.isLimited === true;
+    }
+    
+    // If no isLimited field exists, determine based on endDate presence
+    return !!sponsorship.endDate;
   }
 
   createAdvancedSearchForm(): FormGroup {
@@ -1389,7 +1497,7 @@ export class OrphanManagementComponent implements OnInit {
     this.isGiftHistoryModalVisible = true;
   }
 
-  closeGiftModal(): void {
+  closeGeneralGiftModal(): void {
     this.isGiftModalVisible = false;
     this.selectedOrphanForGift = null;
     this.giftForm.reset();
@@ -1485,7 +1593,7 @@ export class OrphanManagementComponent implements OnInit {
       
       // Close modal after short delay
       setTimeout(() => {
-        this.closeGiftModal();
+        this.closeGeneralGiftModal();
       }, 1500);
       
     } catch (error: any) {
@@ -1572,71 +1680,63 @@ export class OrphanManagementComponent implements OnInit {
   
   // Get all gifts from all sponsorships (remove duplicates)
   getAllGifts(): any[] {
-    if (!this.selectedOrphan?.sponsorships) {
-      return [];
-    }
-    
     console.log('=== DEBUG: getAllGifts() called ===');
-    console.log('Selected orphan sponsorships:', this.selectedOrphan.sponsorships);
     
     const allGifts: any[] = [];
     const seenGiftIds = new Set<number>();
     
-    this.selectedOrphan.sponsorships.forEach((sponsorship: any) => {
-      console.log('Processing sponsorship:', sponsorship);
-      if (sponsorship.gifts && Array.isArray(sponsorship.gifts)) {
-        console.log('Sponsorship gifts array:', sponsorship.gifts);
-        sponsorship.gifts.forEach((gift: any) => {
-          console.log('Processing individual gift:', gift);
-          const giftId = gift.id || gift.giftId;
-          if (giftId && !seenGiftIds.has(giftId)) {
-            seenGiftIds.add(giftId);
-            // Ensure proper field mapping based on database structure
-            console.log('Mapping gift fields:');
-            console.log('  gift.gift_value:', gift.gift_value);
-            console.log('  gift.giftValue:', gift.giftValue);
-            console.log('  gift.amount:', gift.amount);
-            console.log('  gift.gift_type_id:', gift.gift_type_id);
-            console.log('  gift.giftTypeId:', gift.giftTypeId);
-            
-            const mappedGift = {
-              ...gift,
-              // Map amount from gift_value column (as seen in database)
-              amount: gift.gift_value || gift.giftValue || gift.amount || 0,
-              // Map gift type from database structure
-              giftTypeName: this.getGiftTypeNameFromId(gift.gift_type_id) || gift.giftTypeName || gift.giftType || 'Unknown',
-              giftTypeId: gift.gift_type_id || gift.giftTypeId,
-              // Map donor name from sponsorship
-              donorName: sponsorship.donorName || gift.donorName,
-              // Map date fields
-              giftDate: gift.gift_date || gift.giftDate || gift.date,
-              // Ensure gift name is properly mapped
-              giftName: gift.gift_name || gift.giftName || 'Gift'
-            };
-            
-            console.log('Mapped gift result:', mappedGift);
-            allGifts.push(mappedGift);
-          } else if (!giftId) {
-            // If no ID, add anyway but this shouldn't happen in normal cases
-            const mappedGift = {
-              ...gift,
-              // Map amount from gift_value column (as seen in database)
-              amount: gift.gift_value || gift.giftValue || gift.amount || 0,
-              // Map gift type from database structure
-              giftTypeName: this.getGiftTypeNameFromId(gift.gift_type_id) || gift.giftTypeName || gift.giftType || 'Unknown',
-              giftTypeId: gift.gift_type_id || gift.giftTypeId,
-              // Map donor name from sponsorship
-              donorName: sponsorship.donorName || gift.donorName,
-              // Map date fields
-              giftDate: gift.gift_date || gift.giftDate || gift.date,
-              // Ensure gift name is properly mapped
-              giftName: gift.gift_name || gift.giftName || 'Gift'
-            };
-            allGifts.push(mappedGift);
-          }
-        });
-      }
-    });
+    // First, add gifts from the orphanGifts array (non-sponsored gifts)
+    if (this.orphanGifts && Array.isArray(this.orphanGifts)) {
+      console.log('Processing orphanGifts array:', this.orphanGifts);
+      this.orphanGifts.forEach((gift: any) => {
+        const giftId = gift.id || gift.giftId;
+        if (giftId && !seenGiftIds.has(giftId)) {
+          seenGiftIds.add(giftId);
+          const mappedGift = {
+            ...gift,
+            amount: gift.gift_value || gift.giftValue || gift.amount || 0,
+            giftTypeName: this.getGiftTypeNameFromId(gift.gift_type_id) || gift.giftTypeName || gift.giftType || 'Unknown',
+            giftTypeId: gift.gift_type_id || gift.giftTypeId,
+            donorName: gift.donorName || 'System',
+            giftDate: gift.gift_date || gift.giftDate || gift.date,
+            giftName: gift.gift_name || gift.giftName || 'Gift'
+          };
+          allGifts.push(mappedGift);
+        }
+      });
+    }
+    
+    // Then add gifts from sponsorships (if any)
+    if (this.selectedOrphan?.sponsorships) {
+      console.log('Selected orphan sponsorships:', this.selectedOrphan.sponsorships);
+      
+      this.selectedOrphan.sponsorships.forEach((sponsorship: any) => {
+        console.log('Processing sponsorship:', sponsorship);
+        if (sponsorship.gifts && Array.isArray(sponsorship.gifts)) {
+          console.log('Sponsorship gifts array:', sponsorship.gifts);
+          sponsorship.gifts.forEach((gift: any) => {
+            console.log('Processing individual gift:', gift);
+            const giftId = gift.id || gift.giftId;
+            if (giftId && !seenGiftIds.has(giftId)) {
+              seenGiftIds.add(giftId);
+              // Ensure proper field mapping based on database structure
+              const mappedGift = {
+                ...gift,
+                amount: gift.gift_value || gift.giftValue || gift.amount || 0,
+                giftTypeName: this.getGiftTypeNameFromId(gift.gift_type_id) || gift.giftTypeName || gift.giftType || 'Unknown',
+                giftTypeId: gift.gift_type_id || gift.giftTypeId,
+                donorName: sponsorship.donorName || gift.donorName,
+                giftDate: gift.gift_date || gift.giftDate || gift.date,
+                giftName: gift.gift_name || gift.giftName || 'Gift'
+              };
+              
+              console.log('Mapped gift result:', mappedGift);
+              allGifts.push(mappedGift);
+            }
+          });
+        }
+      });
+    }
     
     console.log('Final allGifts array:', allGifts);
     console.log('=== END DEBUG: getAllGifts() ===');
@@ -2045,18 +2145,23 @@ export class OrphanManagementComponent implements OnInit {
 
   // Sponsorship-related methods for new sections
   openAddDonorForm(): void {
+    this.isAddDonorModalVisible = true;
     this.donorForm.reset();
     this.sponsorshipForm.reset();
     
-    // Set default values for sponsorship form
+    // Set default values
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
+    
     this.sponsorshipForm.patchValue({
       sponsorshipType: 'MONTHLY',
-      startDate: formattedDate
+      startDate: formattedDate,
+      giftValue: 0,
+      isLimited: true // Default to limited commitment
     });
     
-    this.isAddDonorModalVisible = true;
+    // Make sure endDate validation is applied correctly
+    this.updateEndDateValidation(this.sponsorshipForm, true);
   }
 
   openSelectDonorForm(): void {
@@ -2069,30 +2174,35 @@ export class OrphanManagementComponent implements OnInit {
     const formattedDate = today.toISOString().split('T')[0];
     this.sponsorshipForm.patchValue({
       sponsorshipType: 'MONTHLY',
-      startDate: formattedDate
+      startDate: formattedDate,
+      giftValue: 0,
+      isLimited: true // Default to limited commitment
     });
+    
+    // Make sure endDate validation is applied correctly
+    this.updateEndDateValidation(this.sponsorshipForm, true);
     
     this.isSelectDonorModalVisible = true;
   }
 
   openAddGiftForm(): void {
-    // Check if there are sponsorships available
-    if (!this.selectedOrphan || !this.selectedOrphan.sponsorships || this.selectedOrphan.sponsorships.length === 0) {
-      this.snackBar.open('No sponsorships available. Please add a sponsorship first.', 'Close', {
+    // Check if orphan is selected
+    if (!this.selectedOrphan) {
+      this.snackBar.open('Please select an orphan first.', 'Close', {
         duration: 5000,
         panelClass: ['error-snackbar']
       });
       return;
     }
     
-    // Open the new sponsorship-based gift modal
-    this.sponsorshipGiftForm.reset();
+    // Open the gift modal (no sponsorship requirement)
+    this.orphanGiftForm.reset();
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
-    this.sponsorshipGiftForm.patchValue({
+    this.orphanGiftForm.patchValue({
       giftDate: formattedDate
     });
-    this.isSponsorshipGiftModalVisible = true;
+    this.isGiftFormModalVisible = true;
   }
 
   loadSponsorships(): void {
@@ -2103,23 +2213,93 @@ export class OrphanManagementComponent implements OnInit {
           console.log('Loaded sponsorships:', sponsorships);
           // Update the selected orphan with sponsorship data
           if (this.selectedOrphan) {
-            this.selectedOrphan.sponsorships = sponsorships.map(s => ({
-              id: s.id || 0,
-              donorId: s.donorId,
-              donorName: s.donorName || 'Unknown Donor',
-              sponsorshipType: s.sponsorshipType,
-              amount: (s as any).amount || 0, // Add amount field with fallback
-              status: s.status || 'ACTIVE', // Add status field with fallback
-              startDate: s.startDate,
-              endDate: s.endDate,
-              gifts: (s.gifts || []).map(g => ({
-                id: g.id || 0,
-                giftName: g.giftName,
-                giftDate: g.giftDate,
-                description: g.description,
-                giftValue: g.giftValue
-              }))
-            }));
+            // Create a counter to track async operations
+            let pendingDonorFetches = 0;
+            const donorFetchesComplete = new Subject<void>();
+            
+            // Process sponsorships with basic data first
+            this.selectedOrphan.sponsorships = sponsorships.map(s => {
+              // Try multiple possible field names for the amount/gift value
+              const amount = (s as any).giftValue || (s as any).amount || (s as any).monthlyAmount || (s as any).yearlyAmount || 0;
+              
+              // If we have donor name, use it; otherwise use a temporary placeholder
+              let donorName = s.donorName;
+              if (!donorName || donorName === 'null' || donorName.trim() === '') {
+                donorName = `Loading donor...`; // Temporary placeholder
+                
+                // Increment the counter for pending donor fetches
+                if (s.donorId) {
+                  pendingDonorFetches++;
+                }
+              }
+              
+              // Explicitly capture isLimited from backend
+              console.log('Sponsorship data from backend:', s);
+              
+              return {
+                id: s.id || 0,
+                donorId: s.donorId,
+                donorName: donorName,
+                sponsorshipType: s.sponsorshipType,
+                amount: amount,
+                status: s.status || 'ACTIVE',
+                startDate: s.startDate,
+                endDate: s.endDate,
+                gifts: (s.gifts || []).map(g => ({
+                  id: g.id || 0,
+                  giftName: g.giftName,
+                  giftDate: g.giftDate,
+                  description: g.description,
+                  giftValue: g.giftValue
+                }))
+              };
+            });
+            
+            // Now fetch donor names for all sponsorships that need them
+            if (pendingDonorFetches > 0) {
+              console.log(`Fetching ${pendingDonorFetches} donor names...`);
+              let completedFetches = 0;
+              
+              // For each sponsorship that needs a donor name
+              this.selectedOrphan.sponsorships.forEach((sponsorship, index) => {
+                if (sponsorship.donorName === 'Loading donor...' && sponsorship.donorId) {
+                  // Fetch the donor details
+                  this.donorService.getDonorById(sponsorship.donorId).subscribe({
+                    next: (donor) => {
+                      // Update the donor name in the sponsorship
+                      if (this.selectedOrphan?.sponsorships) {
+                        this.selectedOrphan.sponsorships[index].donorName = 
+                          `${donor.firstName} ${donor.lastName}`.trim() || `Donor ${sponsorship.donorId}`;
+                      }
+                      
+                      // Check if all fetches are complete
+                      completedFetches++;
+                      if (completedFetches === pendingDonorFetches) {
+                        donorFetchesComplete.next();
+                        donorFetchesComplete.complete();
+                      }
+                    },
+                    error: () => {
+                      // Update with fallback name if donor fetch fails
+                      if (this.selectedOrphan?.sponsorships) {
+                        this.selectedOrphan.sponsorships[index].donorName = `Donor ${sponsorship.donorId}`;
+                      }
+                      
+                      // Check if all fetches are complete
+                      completedFetches++;
+                      if (completedFetches === pendingDonorFetches) {
+                        donorFetchesComplete.next();
+                        donorFetchesComplete.complete();
+                      }
+                    }
+                  });
+                }
+              });
+            } else {
+              // No donor names to fetch, complete immediately
+              donorFetchesComplete.next();
+              donorFetchesComplete.complete();
+            }
           }
         },
         error: (error) => {
@@ -2135,18 +2315,101 @@ export class OrphanManagementComponent implements OnInit {
 
   // This method has been moved to line ~1294
 
-  // Sponsorship-based gift modal methods
-  closeSponsorshipGiftModal(): void {
-    this.isSponsorshipGiftModalVisible = false;
-    this.sponsorshipGiftForm.reset();
+  // Method to refresh sponsorships while preserving donor names
+  refreshSponsorshipsPreservingDonorNames(): void {
+    if (this.selectedOrphan && this.selectedOrphan.id) {
+      // Store current sponsorships with donor names
+      const currentSponsorships = [...(this.selectedOrphan.sponsorships || [])];
+      const donorNameMap = new Map<number, string>();
+      
+      // Create a map of donorId -> donorName from current data
+      currentSponsorships.forEach(s => {
+        if (s.donorId && s.donorName && s.donorName !== 'Loading donor...' && s.donorName !== `Donor ${s.donorId}`) {
+          donorNameMap.set(s.donorId, s.donorName);
+        }
+      });
+      
+      // Now fetch fresh sponsorship data
+      this.sponsorshipService.getSponsorshipsByOrphanId(this.selectedOrphan.id).subscribe({
+        next: (sponsorships) => {
+          console.log('Refreshed sponsorships while preserving donor names:', sponsorships);
+          
+          // Process the fresh sponsorships
+          if (this.selectedOrphan) {
+            this.selectedOrphan.sponsorships = sponsorships.map(s => {
+              // Try multiple possible field names for the amount/gift value
+              const amount = (s as any).giftValue || (s as any).amount || (s as any).monthlyAmount || (s as any).yearlyAmount || 0;
+              
+              // Use the donor name from our map if available, otherwise use what came from the API
+              let donorName = s.donorName || '';
+              if (s.donorId && donorNameMap.has(s.donorId)) {
+                // Use our cached donor name
+                donorName = donorNameMap.get(s.donorId) || donorName;
+              } else if (!donorName || donorName === 'null' || donorName.trim() === '') {
+                // If we don't have a cached name and the API didn't provide one, fetch it
+                donorName = `Donor ${s.donorId}`; // Temporary name
+                
+                // Fetch the donor details if needed
+                if (s.donorId) {
+                  this.donorService.getDonorById(s.donorId).subscribe({
+                    next: (donor) => {
+                      // Find this sponsorship in the array and update its donor name
+                      if (this.selectedOrphan?.sponsorships) {
+                        const index = this.selectedOrphan.sponsorships.findIndex(sp => sp.id === s.id);
+                        if (index !== -1) {
+                          this.selectedOrphan.sponsorships[index].donorName = 
+                            `${donor.firstName} ${donor.lastName}`.trim() || `Donor ${s.donorId}`;
+                        }
+                      }
+                    },
+                    error: () => {
+                      // Keep the temporary name on error
+                    }
+                  });
+                }
+              }
+              
+              return {
+                id: s.id || 0,
+                donorId: s.donorId,
+                donorName: donorName,
+                sponsorshipType: s.sponsorshipType,
+                amount: amount,
+                status: s.status || 'ACTIVE',
+                startDate: s.startDate,
+                endDate: s.endDate,
+                isLimited: s.isLimited, // Add the missing isLimited field
+                gifts: (s.gifts || []).map(g => ({
+                  id: g.id || 0,
+                  giftName: g.giftName,
+                  giftDate: g.giftDate,
+                  description: g.description,
+                  giftValue: g.giftValue
+                }))
+              };
+            });
+          }
+        },
+        error: (error) => {
+          console.error('Error refreshing sponsorships:', error);
+          // Keep existing sponsorships on error
+        }
+      });
+    }
+  }
+
+  // Gift modal methods
+  closeGiftModal(): void {
+    this.isGiftFormModalVisible = false;
+    this.orphanGiftForm.reset();
     this.isSubmittingGift = false;
   }
 
-  submitSponsorshipGift(): void {
-    if (this.sponsorshipGiftForm.valid && !this.isSubmittingGift && this.selectedOrphan) {
+  submitOrphanGiftForm(): void {
+    if (this.orphanGiftForm.valid && !this.isSubmittingGift && this.selectedOrphan) {
       this.isSubmittingGift = true;
       
-      const formValue = this.sponsorshipGiftForm.value;
+      const formValue = this.orphanGiftForm.value;
       
       // Handle custom gift type creation if needed
       let giftTypeId = formValue.giftTypeId;
@@ -2178,7 +2441,7 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   processGiftSubmission(giftTypeId: number): void {
-    const formValue = this.sponsorshipGiftForm.value;
+    const formValue = this.orphanGiftForm.value;
     
     // Check balance before creating gift
     this.giftService.checkGiftTypeBalance(giftTypeId, +formValue.giftValue).subscribe({
@@ -2195,8 +2458,32 @@ export class OrphanManagementComponent implements OnInit {
         // Convert date string to ISO DateTime format for backend
         const giftDate = new Date(formValue.giftDate);
         
+        // Find if the orphan has any active sponsorships to get a donor ID
+        let donorId: number | null = null;
+        
+        // If the orphan has sponsorships, use the donor ID from the first active one
+        if (this.selectedOrphan?.sponsorships && this.selectedOrphan.sponsorships.length > 0) {
+          const activeSponsorship = this.selectedOrphan.sponsorships.find(s => s.status === 'ACTIVE');
+          if (activeSponsorship) {
+            donorId = activeSponsorship.donorId;
+          }
+        }
+        
+        // If no donor ID from sponsorship, find a valid donor from the donors list
+        if (!donorId && this.donors.length > 0) {
+          // Try to find donor with ID 1 first (system donor)
+          const systemDonor = this.donors.find(d => d.id === 1);
+          if (systemDonor && systemDonor.id) {
+            donorId = systemDonor.id;
+          } else if (this.donors[0] && this.donors[0].id) {
+            // Otherwise use the first donor in the list
+            donorId = this.donors[0].id;
+          }
+        }
+        
+        // Create the gift request with the donor ID (always required by backend)
         const giftRequest: CreateGiftRequestV2 = {
-          donorId: 1, // Default donor ID since not shown in form
+          donorId: donorId as number, // Cast to number since we've ensured it's valid
           giftTypeId: giftTypeId,
           amount: +formValue.giftValue,
           giftName: formValue.giftName || 'Gift',
@@ -2209,10 +2496,20 @@ export class OrphanManagementComponent implements OnInit {
         this.giftService.createGiftV2(giftRequest).subscribe({
           next: (response) => {
             this.isSubmittingGift = false;
-            this.closeSponsorshipGiftModal();
+            this.closeGiftModal();
             
-            // Reload sponsorships to show the new gift
+            // Reload sponsorships and gifts to show the new gift
             this.loadSponsorships();
+            
+            // Reload gifts if we're on the gifts tab
+            if (this.activeSection === 'gifts' && this.selectedOrphan?.id) {
+              this.loadOrphanGiftsForDetail();
+            }
+            
+            // Also reload gifts in the gift history modal if it's open
+            if (this.selectedOrphanForGift && this.isGiftHistoryModalVisible) {
+              this.loadOrphanGifts(this.selectedOrphanForGift.id!);
+            }
             
             this.snackBar.open('Gift added successfully!', 'Close', {
               duration: 3000,
@@ -2246,6 +2543,165 @@ export class OrphanManagementComponent implements OnInit {
   }
 
 
+  // Properties for sponsorship editing
+  isEditSponsorshipModalVisible = false;
+  isUpdatingSponsorship = false;
+  editingSponsorshipId: number | null = null;
+
+  // Edit sponsorship method
+  editSponsorship(sponsorship: any): void {
+    this.editingSponsorshipId = sponsorship.id;
+    
+    // Format date for input field
+    let startDate = '';
+    let endDate = '';
+    
+    if (sponsorship.startDate) {
+      const date = new Date(sponsorship.startDate);
+      startDate = date.toISOString().split('T')[0];
+    }
+    
+    if (sponsorship.endDate) {
+      const date = new Date(sponsorship.endDate);
+      endDate = date.toISOString().split('T')[0];
+    }
+    
+    // Determine if this is a limited commitment based on endDate
+    // If endDate exists, it's a limited commitment
+    const isLimited = !!endDate;
+    
+    // Reset form and populate with current data
+    this.sponsorshipForm.reset();
+    this.sponsorshipForm.patchValue({
+      donorId: sponsorship.donorId,
+      sponsorshipType: sponsorship.sponsorshipType,
+      startDate: startDate,
+      endDate: endDate,
+      giftValue: sponsorship.amount,
+      isLimited: isLimited // Set based on whether endDate exists
+    });
+    
+    // Make sure endDate validation is applied correctly
+    this.updateEndDateValidation(this.sponsorshipForm, isLimited);
+    
+    this.openEditSponsorshipModal();
+  }
+  
+  // Open edit sponsorship modal
+  openEditSponsorshipModal(): void {
+    // Load existing donors for the dropdown
+    this.loadDonors();
+    
+    // Show the edit modal
+    this.isEditSponsorshipModalVisible = true;
+  }
+  
+  // Close edit sponsorship modal
+  closeEditSponsorshipModal(): void {
+    this.isEditSponsorshipModalVisible = false;
+    this.sponsorshipForm.reset();
+    this.editingSponsorshipId = null;
+    this.isUpdatingSponsorship = false;
+  }
+  
+  // Update sponsorship method
+  updateSponsorship(): void {
+    if (this.sponsorshipForm.valid && this.editingSponsorshipId && !this.isUpdatingSponsorship) {
+      this.isUpdatingSponsorship = true;
+      const sponsorshipData = {
+        donorId: this.sponsorshipForm.value.donorId,
+        sponsorshipType: this.sponsorshipForm.value.sponsorshipType,
+        startDate: this.sponsorshipForm.value.startDate,
+        endDate: this.sponsorshipForm.value.endDate,
+        giftValue: this.sponsorshipForm.value.giftValue,
+        isLimited: this.sponsorshipForm.value.isLimited,
+        orphanId: this.selectedOrphan?.id
+      };
+      
+      // Store donor details for UI update
+      let donorDetails: any = null;
+      
+      // First get the donor details to update the UI with the correct donor name
+      this.donorService.getDonorById(sponsorshipData.donorId).subscribe({
+        next: (donor) => {
+          // Save donor details for later use
+          donorDetails = donor;
+          
+          // Now update the sponsorship with the backend
+          // Ensure editingSponsorshipId is not null before passing it
+          if (this.editingSponsorshipId !== null) {
+            this.sponsorshipService.updateSponsorship(this.editingSponsorshipId, sponsorshipData).subscribe({
+              next: (updatedSponsorship) => {
+                console.log('Backend response - updated sponsorship:', updatedSponsorship);
+                console.log('Backend response - isLimited field:', updatedSponsorship.isLimited);
+                this.isUpdatingSponsorship = false;
+                this.closeEditSponsorshipModal();
+                
+                // Update the sponsorship in the local array immediately
+                if (this.selectedOrphan && this.selectedOrphan.sponsorships) {
+                  const index = this.selectedOrphan.sponsorships.findIndex(s => s.id === this.editingSponsorshipId);
+                  if (index !== -1) {
+                    // Update all fields including the donor name
+                    this.selectedOrphan.sponsorships[index].donorId = sponsorshipData.donorId;
+                    this.selectedOrphan.sponsorships[index].donorName = `${donorDetails.firstName} ${donorDetails.lastName}`.trim();
+                    this.selectedOrphan.sponsorships[index].sponsorshipType = sponsorshipData.sponsorshipType;
+                    this.selectedOrphan.sponsorships[index].amount = sponsorshipData.giftValue;
+                    this.selectedOrphan.sponsorships[index].startDate = sponsorshipData.startDate;
+                    this.selectedOrphan.sponsorships[index].endDate = sponsorshipData.endDate;
+                    this.selectedOrphan.sponsorships[index].isLimited = sponsorshipData.isLimited;
+                    
+                    console.log('Local UI update - isLimited value:', sponsorshipData.isLimited);
+                    console.log('Updated sponsorship object:', this.selectedOrphan.sponsorships[index]);
+                  }
+                }
+                
+                // Instead of reloading the entire orphan details, just update the sponsorships
+                // This prevents the UI from showing temporary placeholder donor names
+                if (this.selectedOrphan && this.selectedOrphan.id) {
+                  // We'll use a custom method to refresh sponsorships while preserving donor names
+                  this.refreshSponsorshipsPreservingDonorNames();
+                }
+                
+                this.snackBar.open('Sponsorship updated successfully!', 'Close', {
+                  duration: 3000,
+                  panelClass: ['success-snackbar']
+                });
+              },
+              error: (error: any) => {
+                this.isUpdatingSponsorship = false;
+                console.error('Error updating sponsorship:', error);
+                
+                let errorMessage = 'Failed to update sponsorship. Please try again.';
+                if (error.error && error.error.message) {
+                  errorMessage = error.error.message;
+                }
+                
+                this.snackBar.open(errorMessage, 'Close', {
+                  duration: 5000,
+                  panelClass: ['error-snackbar']
+                });
+              }
+            });
+          }
+        },
+        error: (error: any) => {
+          this.isUpdatingSponsorship = false;
+          console.error('Error fetching donor details:', error);
+          
+          let errorMessage = 'Failed to fetch donor details. Please try again.';
+          if (error.error && error.error.message) {
+            errorMessage = error.error.message;
+          }
+          
+          this.snackBar.open(errorMessage, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
   // Cancel sponsorship method
   cancelSponsorship(sponsorship: any): void {
     if (confirm(`Are you sure you want to cancel the sponsorship with ${sponsorship.donorName}?`)) {
@@ -2273,7 +2729,73 @@ export class OrphanManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error cancelling sponsorship:', error);
-          this.snackBar.open('Error cancelling sponsorship', 'Close', {
+        }
+      });
+    }
+  }
+
+  // Put sponsorship on hold method
+  putSponsorshipOnHold(sponsorship: any): void {
+    if (confirm(`Are you sure you want to put the sponsorship with ${sponsorship.donorName} on hold?`)) {
+      this.sponsorshipService.putSponsorshipOnHold(sponsorship.id).subscribe({
+        next: (updatedSponsorship) => {
+          // Update the sponsorship in the local array
+          if (this.selectedOrphan && this.selectedOrphan.sponsorships) {
+            const index = this.selectedOrphan.sponsorships.findIndex(s => s.id === sponsorship.id);
+            if (index !== -1) {
+              // Update the status directly
+              this.selectedOrphan.sponsorships[index].status = 'ON_HOLD';
+            }
+          }
+          
+          // Refresh the orphan data completely to ensure all UI elements update
+          if (this.selectedOrphan && this.selectedOrphan.id) {
+            this.loadOrphanDetails(this.selectedOrphan.id);
+          }
+          
+          this.snackBar.open('Sponsorship put on hold successfully', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        },
+        error: (error) => {
+          console.error('Error putting sponsorship on hold:', error);
+          this.snackBar.open('Error putting sponsorship on hold', 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Reactivate sponsorship method
+  reactivateSponsorship(sponsorship: any): void {
+    if (confirm(`Are you sure you want to reactivate the sponsorship with ${sponsorship.donorName}?`)) {
+      this.sponsorshipService.reactivateSponsorship(sponsorship.id).subscribe({
+        next: (updatedSponsorship) => {
+          // Update the sponsorship in the local array
+          if (this.selectedOrphan && this.selectedOrphan.sponsorships) {
+            const index = this.selectedOrphan.sponsorships.findIndex(s => s.id === sponsorship.id);
+            if (index !== -1) {
+              // Update the status directly
+              this.selectedOrphan.sponsorships[index].status = 'ACTIVE';
+            }
+          }
+          
+          // Refresh the orphan data completely to ensure all UI elements update
+          if (this.selectedOrphan && this.selectedOrphan.id) {
+            this.loadOrphanDetails(this.selectedOrphan.id);
+          }
+          
+          this.snackBar.open('Sponsorship reactivated successfully', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        },
+        error: (error) => {
+          console.error('Error reactivating sponsorship:', error);
+          this.snackBar.open('Error reactivating sponsorship', 'Close', {
             duration: 5000,
             panelClass: ['error-snackbar']
           });
@@ -2312,7 +2834,7 @@ export class OrphanManagementComponent implements OnInit {
 
   // Create new donor and sponsorship
   createDonorWithSponsorship(): void {
-    if (this.donorForm.valid && this.sponsorshipForm.valid && this.selectedOrphan) {
+    if (this.donorForm.valid && this.sponsorshipForm.valid) {
       this.isCreatingSponsorshipWithNewDonor = true;
 
       const donorData = this.donorForm.value;
@@ -2324,7 +2846,7 @@ export class OrphanManagementComponent implements OnInit {
           const sponsorshipData = {
             ...this.sponsorshipForm.value,
             donorId: createdDonor.id,
-            orphanId: this.selectedOrphan!.id
+            orphanId: this.selectedOrphan?.id
           };
 
           this.sponsorshipService.createSponsorship(sponsorshipData).subscribe({
@@ -2433,18 +2955,9 @@ export class OrphanManagementComponent implements OnInit {
 
   // Gift edit and delete functionality
   editOrphanGift(gift: Gift): void {
-    // Find the sponsorship that contains this gift
-    const sponsorship = this.selectedOrphan?.sponsorships?.find(s => 
-      s.gifts?.some((g: any) => g.id === gift.id)
-    );
-    
-    if (!sponsorship) {
-      this.snackBar.open('Cannot find sponsorship for this gift', 'Close', {
-        duration: 3000,
-        panelClass: ['error-snackbar']
-      });
-      return;
-    }
+    console.log('Editing gift:', gift);
+    // No need to find sponsorship - gifts can exist without sponsorships now
+    // Just proceed with editing the gift directly
 
     // Format date for input field
     let formattedDate = '';
@@ -2453,13 +2966,25 @@ export class OrphanManagementComponent implements OnInit {
       formattedDate = date.toISOString().split('T')[0];
     }
 
+    // Make sure we have the active section set to gifts
+    this.activeSection = 'gifts';
+    
+    // Ensure we have gift types loaded
+    if (!this.giftTypes || this.giftTypes.length === 0) {
+      this.loadGiftTypes();
+    }
+    
     // Populate the gift form with existing data
+    this.giftForm.reset(); // Clear previous values first
     this.giftForm.patchValue({
       giftName: gift.giftName || '',
+      giftTypeId: typeof gift.giftType === 'number' ? gift.giftType : 1,
       giftValue: gift.amount || 0,
       giftDate: formattedDate,
       description: gift.description || ''
     });
+    
+    console.log('Form values after patch:', this.giftForm.value);
 
     // Set edit mode
     this.isEditingGift = true;
@@ -2467,6 +2992,10 @@ export class OrphanManagementComponent implements OnInit {
   }
 
   updateOrphanGift(): void {
+    console.log('Updating gift with form values:', this.giftForm.value);
+    console.log('Form valid?', this.giftForm.valid);
+    console.log('Editing gift ID:', this.editingGiftId);
+    
     if (this.giftForm.valid && this.editingGiftId) {
       this.isSubmittingGift = true;
       
@@ -2480,47 +3009,107 @@ export class OrphanManagementComponent implements OnInit {
         this.isSubmittingGift = false;
         return;
       }
+      
+      console.log('Original gift found:', originalGift);
 
-      const updateData: CreateGiftRequest = {
-        donorId: originalGift.donorId || 0,
-        giftType: originalGift.giftType || 1,
-        amount: this.giftForm.value.giftValue,
-        giftName: this.giftForm.value.giftName,
-        date: this.giftForm.value.giftDate,
-        description: this.giftForm.value.description,
-        orphanId: originalGift.orphanId,
-        projectId: originalGift.projectId,
-        sponsorshipId: originalGift.sponsorshipId
-      };
-
-      this.giftService.updateGift(this.editingGiftId, updateData).subscribe({
-        next: () => {
-          this.isSubmittingGift = false;
-          this.cancelEditOrphanGift();
-          
-          this.snackBar.open('Gift updated successfully!', 'Close', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
-          
-          // Reload sponsorships to refresh the gift list
-          this.loadSponsorships();
-        },
-        error: (error) => {
-          this.isSubmittingGift = false;
-          console.error('Error updating gift:', error);
-          
-          let errorMessage = 'Failed to update gift. Please try again.';
-          if (error.error && error.error.message) {
-            errorMessage = error.error.message;
+      // Use CreateGiftRequestV2 format for the V2 API
+      const giftTypeId = this.giftForm.value.giftTypeId || (originalGift.giftType as number) || 1;
+      const amount = this.giftForm.value.giftValue;
+      
+      // First check if the gift type has sufficient balance
+      this.giftService.checkGiftTypeBalance(giftTypeId, amount).subscribe(
+        (hasBalance: boolean) => {
+          if (!hasBalance) {
+            this.isSubmittingGift = false;
+            this.snackBar.open(`Insufficient balance in selected gift type. Please choose a different gift type or amount.`, 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
+            return;
           }
           
-          this.snackBar.open(errorMessage, 'Close', {
-            duration: 5000,
+          const updateData: CreateGiftRequestV2 = {
+            donorId: originalGift.donorId || 0,
+            giftTypeId: giftTypeId,
+            amount: amount,
+            giftName: this.giftForm.value.giftName,
+            date: this.giftForm.value.giftDate,
+            description: this.giftForm.value.description,
+            beneficiaryType: BeneficiaryType.ORPHAN,
+            orphanId: originalGift.orphanId,
+            // Make projectId and sponsorshipId optional to support non-sponsored gifts
+            projectId: originalGift.projectId || undefined,
+            sponsorshipId: originalGift.sponsorshipId || undefined
+          };
+          
+          console.log('Update data being sent:', updateData);
+
+          if (this.editingGiftId) {
+            this.giftService.updateGiftV2(this.editingGiftId, updateData).subscribe({
+              next: (response) => {
+                console.log('Gift updated successfully:', response);
+                this.isSubmittingGift = false;
+                this.cancelEditOrphanGift();
+                
+                this.snackBar.open('Gift updated successfully!', 'Close', {
+                  duration: 3000,
+                  panelClass: ['success-snackbar']
+                });
+                
+                // Reload sponsorships to refresh the gift list
+                this.loadSponsorships();
+                
+                // Refresh gifts list if we're on the gifts tab
+                if (this.activeSection === 'gifts' && this.selectedOrphan?.id) {
+                  this.loadOrphanGiftsForDetail();
+                }
+                
+                // Also refresh gifts in the gift history modal if it's open
+                if (this.selectedOrphanForGift && this.isGiftHistoryModalVisible) {
+                  this.loadOrphanGifts(this.selectedOrphanForGift.id!);
+                }
+              },
+              error: (error) => {
+                this.isSubmittingGift = false;
+                console.error('Error updating gift:', error);
+                
+                let errorMessage = 'Failed to update gift. Please try again.';
+                
+                // Extract specific error message if available
+                if (error.error && error.error.message) {
+                  errorMessage = error.error.message;
+                } else if (error.error && typeof error.error === 'string' && error.error.includes('Insufficient balance')) {
+                  errorMessage = error.error;
+                }
+                
+                this.snackBar.open(errorMessage, 'Close', {
+                  duration: 5000,
+                  panelClass: ['error-snackbar']
+                });
+              }
+            });
+          }
+        },
+        (error) => {
+          this.isSubmittingGift = false;
+          console.error('Error checking gift type balance:', error);
+          this.snackBar.open('Error checking gift type balance. Please try again.', 'Close', {
+            duration: 3000,
             panelClass: ['error-snackbar']
           });
         }
-      });
+      );
+    } else {
+      console.warn('Form is invalid or no editing gift ID');
+      if (!this.giftForm.valid) {
+        // Show validation errors
+        Object.keys(this.giftForm.controls).forEach(key => {
+          const control = this.giftForm.get(key);
+          if (control && control.errors) {
+            console.log(`Validation error in ${key}:`, control.errors);
+          }
+        });
+      }
     }
   }
 
@@ -2575,6 +3164,16 @@ export class OrphanManagementComponent implements OnInit {
             
             // Reload sponsorships to refresh the gift list
             this.loadSponsorships();
+            
+            // Refresh gifts list if we're on the gifts tab
+            if (this.activeSection === 'gifts' && this.selectedOrphan?.id) {
+              this.loadOrphanGiftsForDetail();
+            }
+            
+            // Also refresh gifts in the gift history modal if it's open
+            if (this.selectedOrphanForGift && this.isGiftHistoryModalVisible) {
+              this.loadOrphanGifts(this.selectedOrphanForGift.id!);
+            }
           },
           error: (error) => {
             console.error('Error deleting gift:', error);
