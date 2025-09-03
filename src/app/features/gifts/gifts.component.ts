@@ -85,20 +85,38 @@ export class GiftsComponent implements OnInit {
   }
 
   loadGiftTypes(): void {
+    console.log('Starting to load gift types...');
     this.isLoading = true;
     this.error = '';
     
+    // Try the complex query first, fallback to simple if it fails
     this.giftTypeService.getAllGiftTypesWithBalances().subscribe({
       next: (giftTypes) => {
+        console.log('Gift types loaded successfully:', giftTypes);
         this.giftTypes = giftTypes.filter(gt => gt.isActive);
+        console.log('Filtered active gift types:', this.giftTypes);
         this.organizeIntoCategories();
         this.calculateSummaryStats();
         this.isLoading = false;
+        console.log('Loading completed, isLoading set to false');
       },
       error: (error) => {
-        console.error('Error loading gift types:', error);
-        this.error = 'Failed to load gift types';
-        this.isLoading = false;
+        console.error('Complex query failed, trying simple fallback:', error);
+        // Fallback to simple query
+        this.giftTypeService.getAllGiftTypesSimple().subscribe({
+          next: (giftTypes) => {
+            console.log('Simple query succeeded:', giftTypes);
+            this.giftTypes = giftTypes.filter(gt => gt.isActive);
+            this.organizeIntoCategories();
+            this.calculateSummaryStats();
+            this.isLoading = false;
+          },
+          error: (fallbackError) => {
+            console.error('Both queries failed:', fallbackError);
+            this.error = `Failed to load gift types: ${fallbackError.message || fallbackError.status || 'Unknown error'}`;
+            this.isLoading = false;
+          }
+        });
       }
     });
   }

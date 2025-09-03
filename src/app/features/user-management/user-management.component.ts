@@ -16,6 +16,7 @@ export class UserManagementComponent implements OnInit {
   filteredUsers: User[] = [];
   searchTerm: string = '';
   isLoading: boolean = false;
+  isAssigningPermissions: boolean = false;
   
   // Form states
   userForm!: FormGroup;
@@ -178,7 +179,11 @@ export class UserManagementComponent implements OnInit {
 
         this.userService.createUser(createData).subscribe({
           next: () => {
-            this.showSuccessMessage('User created successfully');
+            if (createData.role === 'ROLE_ADMIN') {
+              this.showSuccessMessage('Admin user created successfully with full permissions to all pages');
+            } else {
+              this.showSuccessMessage('User created successfully');
+            }
             this.closeUserModal();
             this.loadUsers();
             this.isLoading = false;
@@ -340,6 +345,24 @@ export class UserManagementComponent implements OnInit {
   getRoleLabel(role: string): string {
     const roleObj = this.userRoles.find(r => r.value === role);
     return roleObj ? roleObj.label : role;
+  }
+  
+  // Fix permissions for existing admin users
+  assignDefaultAdminPermissions(): void {
+    this.isAssigningPermissions = true;
+    this.userService.forceUpdateAdminPermissions().subscribe({
+      next: (response) => {
+        console.log('Admin permissions response:', response);
+        this.showSuccessMessage('All admin permissions have been reset with full access to all pages');
+        this.loadUsers(); // Reload users to reflect any changes
+        this.isAssigningPermissions = false;
+      },
+      error: (error) => {
+        console.error('Error fixing admin permissions:', error);
+        this.showErrorMessage('Failed to fix admin permissions');
+        this.isAssigningPermissions = false;
+      }
+    });
   }
 
   showSuccessMessage(message: string): void {

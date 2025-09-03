@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, timeout } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
-import { UserService } from '../../shared/services/user.service';
+import { PermissionService } from '../services/permission.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +12,7 @@ export class PermissionGuard implements CanActivate {
 
   constructor(
     private authService: AuthService,
-    private userService: UserService,
+    private permissionService: PermissionService,
     private router: Router
   ) {}
 
@@ -35,24 +35,19 @@ export class PermissionGuard implements CanActivate {
     // Get the route path for permission checking
     const routePath = this.getRoutePermissionPath(state.url);
     
-    // Check user permissions for this route
-    return this.userService.getUserPermissions(currentUser.id).pipe(
-      map(permissions => {
-        const hasPermission = permissions.some(p => 
-          p.route === routePath && p.canAccess
-        );
-        
-        if (!hasPermission) {
-          // Redirect to access denied page
+    // Use PermissionService with timeout to prevent infinite loading
+    return this.permissionService.canAccessRoute(routePath).pipe(
+      timeout(5000), // 5 second timeout
+      map(hasAccess => {
+        if (!hasAccess) {
           this.router.navigate(['/access-denied']);
           return false;
         }
-        
         return true;
       }),
       catchError(error => {
         console.error('Error checking permissions:', error);
-        // On error, allow access for now (could be changed to deny)
+        // On timeout or error, allow access to prevent infinite loading
         return of(true);
       })
     );

@@ -7,9 +7,16 @@
           <h4 class="mb-0 fw-bold text-primary">
             <i class="fas fa-users me-3"></i>User Management
           </h4>
-          <button class="btn btn-primary shadow-sm" (click)="openCreateUserModal()">
-            <i class="fas fa-plus me-2"></i>Add New User
-          </button>
+          <div>
+            <button class="btn btn-info shadow-sm me-2" (click)="assignDefaultAdminPermissions()" [disabled]="isAssigningPermissions">
+              <i class="fas fa-key me-2"></i>
+              <span *ngIf="!isAssigningPermissions">Fix Admin Permissions</span>
+              <span *ngIf="isAssigningPermissions"><i class="fas fa-spinner fa-spin"></i> Fixing...</span>
+            </button>
+            <button class="btn btn-primary shadow-sm" (click)="openCreateUserModal()">
+              <i class="fas fa-plus me-2"></i>Add New User
+            </button>
+          </div>
         </div>
 
         <!-- Success/Error Messages -->
@@ -245,6 +252,10 @@
                 <div class="invalid-feedback" *ngIf="userForm.get('role')?.invalid && userForm.get('role')?.touched">
                   Role is required
                 </div>
+                <small class="form-text text-info" *ngIf="userForm.get('role')?.value === 'ROLE_ADMIN'">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Admin users automatically receive full permissions to all pages.
+                </small>
               </div>
             </div>
           </div>
@@ -283,6 +294,9 @@
           <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
             Configure which pages this user can access. Unchecked routes will be restricted.
+            <span *ngIf="selectedUser?.role === 'ROLE_ADMIN'">
+              <br><strong>Note:</strong> Admin users automatically receive full permissions to all pages when created.
+            </span>
           </div>
           
           <div class="row">
