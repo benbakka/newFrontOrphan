@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { GiftType, CreateGiftTypeRequest, GiftTypeBalance } from '../models/gift-type.model';
 import { Donation } from '../models/donation.model';
 import { Gift } from '../models/gift.model';
@@ -21,7 +22,14 @@ export class GiftTypeService {
 
   // Get all gift types with their balances
   getAllGiftTypesWithBalances(): Observable<GiftType[]> {
+    console.log('Making API call to:', `${this.apiUrl}/with-balances`);
     return this.http.get<GiftType[]>(`${this.apiUrl}/with-balances`);
+  }
+
+  // Simple fallback method
+  getAllGiftTypesSimple(): Observable<GiftType[]> {
+    console.log('Making simple API call to:', `${this.apiUrl}/simple`);
+    return this.http.get<GiftType[]>(`${this.apiUrl}/simple`);
   }
 
   // Get gift type by ID

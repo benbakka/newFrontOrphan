@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { User } from '../../core/models/auth.model';
 import { OrphanManagementComponent } from '../orphan-management/orphan-management.component';
 import { DonorManagementComponent } from '../donor-management/donor-management.component';
+import { GiftsComponent } from '../gifts/gifts.component';
 import { CharityProjectsComponent } from '../charity-projects/charity-projects.component';
 import { UserManagementComponent } from '../user-management/user-management.component';
 import { ReportsComponent } from '../reports/reports.component';
@@ -15,7 +16,7 @@ import { ReportsComponent } from '../reports/reports.component';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgComponentOutlet, FormsModule, OrphanManagementComponent, DonorManagementComponent, CharityProjectsComponent, UserManagementComponent, ReportsComponent],
+  imports: [CommonModule, FormsModule, OrphanManagementComponent, DonorManagementComponent, GiftsComponent, CharityProjectsComponent, UserManagementComponent, ReportsComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
   styles: [`

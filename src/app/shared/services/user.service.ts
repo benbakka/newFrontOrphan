@@ -33,6 +33,7 @@ export class UserService {
   }
 
   // Create new user
+  // For admin users, permissions are automatically created on the backend
   createUser(user: CreateUserRequest): Observable<any> {
     console.log('Creating user with data:', user);
     return this.http.post(`${this.apiUrl}/register`, user, this.getHttpOptions());
@@ -56,6 +57,16 @@ export class UserService {
   // Update user permissions
   updateUserPermissions(userId: number, permissions: Permission[]): Observable<any> {
     return this.http.put(`${this.apiUrl}/users/${userId}/permissions`, permissions, this.getHttpOptions());
+  }
+  
+  // Create default permissions for all existing admin users
+  createDefaultAdminPermissions(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/admin/create-default-permissions`, {}, this.getHttpOptions());
+  }
+  
+  // Force update all admin users with full permissions (overwrites existing)
+  forceUpdateAdminPermissions(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/admin/force-update-permissions`, {}, this.getHttpOptions());
   }
 
   // Check if username exists

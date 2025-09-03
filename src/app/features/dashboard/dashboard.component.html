@@ -137,14 +137,7 @@
 
       <!-- Gift Types & Funds Tab -->
       <div *ngIf="activeTab === 'gifts' && availableTabs.includes('gifts')" class="tab-content-panel">
-        <ng-container *ngIf="giftsComponent">
-          <ng-container *ngComponentOutlet="giftsComponent"></ng-container>
-        </ng-container>
-        <div *ngIf="!giftsComponent" class="text-center py-4">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </div>
+        <app-gifts></app-gifts>
       </div>
 
       <!-- Charity Projects Tab -->
