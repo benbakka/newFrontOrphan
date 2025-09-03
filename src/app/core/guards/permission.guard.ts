@@ -21,7 +21,7 @@ export class PermissionGuard implements CanActivate {
     state: RouterStateSnapshot
   ): Observable<boolean> {
     const currentUser = this.authService.getCurrentUser();
-    
+
     if (!currentUser) {
       this.router.navigate(['/login']);
       return of(false);
@@ -34,20 +34,20 @@ export class PermissionGuard implements CanActivate {
 
     // Get the route path for permission checking
     const routePath = this.getRoutePermissionPath(state.url);
-    
+
     // Check user permissions for this route
     return this.userService.getUserPermissions(currentUser.id).pipe(
       map(permissions => {
-        const hasPermission = permissions.some(p => 
+        const hasPermission = permissions.some(p =>
           p.route === routePath && p.canAccess
         );
-        
+
         if (!hasPermission) {
           // Redirect to access denied page
           this.router.navigate(['/access-denied']);
           return false;
         }
-        
+
         return true;
       }),
       catchError(error => {
@@ -78,7 +78,7 @@ export class PermissionGuard implements CanActivate {
     if (url.startsWith('/reports')) {
       return '/reports';
     }
-    
+
     // Default to dashboard
     return '/dashboard';
   }

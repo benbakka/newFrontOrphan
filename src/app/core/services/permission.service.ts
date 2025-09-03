@@ -11,7 +11,7 @@ export class PermissionService {
   private userPermissions: Permission[] = [];
   private permissionsSubject = new BehaviorSubject<Permission[]>([]);
   private permissionsLoadedSubject = new BehaviorSubject<boolean>(false);
-  
+
   public permissions$ = this.permissionsSubject.asObservable();
   public permissionsLoaded$ = this.permissionsLoadedSubject.asObservable();
 
@@ -23,7 +23,7 @@ export class PermissionService {
     setTimeout(() => {
       this.loadUserPermissions();
     }, 100);
-    
+
     // Reload permissions when user changes
     this.authService.currentUser$.subscribe(user => {
       if (user) {
@@ -68,6 +68,7 @@ export class PermissionService {
 
     // Load permissions from backend for non-admin users
     console.log('Loading permissions for user ID:', currentUser.id);
+    console.log(currentUser.roles)
     this.userService.getUserPermissions(currentUser.id).subscribe({
       next: (permissions) => {
         console.log('Permissions loaded successfully:', permissions);
@@ -87,7 +88,7 @@ export class PermissionService {
 
   hasPermission(route: string): boolean {
     const currentUser = this.authService.getCurrentUser();
-    
+
     // Admin users have all permissions
     if (currentUser?.roles && currentUser.roles.includes('ROLE_ADMIN')) {
       return true;
@@ -101,7 +102,7 @@ export class PermissionService {
   canAccessRoute(route: string): Observable<boolean> {
     return new Observable(observer => {
       const currentUser = this.authService.getCurrentUser();
-      
+
       if (!currentUser) {
         observer.next(false);
         observer.complete();
