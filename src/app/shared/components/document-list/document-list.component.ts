@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { OrphanDocumentService } from '../../../core/services/orphan-document.service';
 import { OrphanDocument, DocumentType, DocumentTypeLabels } from '../../models/orphan-document.model';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-document-list',
