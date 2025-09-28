@@ -8,7 +8,7 @@
           Orphan Management
         </h4>
         <div class="btn-group">
-          <button 
+          <button
             class="btn btn-primary"
             (click)="createNewOrphan()"
             [disabled]="isLoading"
@@ -16,7 +16,7 @@
             <i class="fas fa-plus me-2"></i>
             Add New Orphan
           </button>
-          <button 
+          <button
             class="btn btn-success"
             (click)="openUploadModal()"
             [disabled]="isLoading"
@@ -24,7 +24,7 @@
             <i class="fas fa-upload me-2"></i>
             Upload Excel
           </button>
-          <button 
+          <button
             class="btn btn-danger ms-2"
             (click)="deleteAllOrphans()"
             [disabled]="isLoading || orphansList.length === 0"
@@ -52,16 +52,16 @@
             <span class="input-group-text">
               <i class="fas fa-search"></i>
             </span>
-            <input 
-              type="text" 
-              class="form-control" 
+            <input
+              type="text"
+              class="form-control"
               placeholder="Search by name, age, gender, ID, place of birth, location..."
               [(ngModel)]="searchTerm"
               (input)="onSearchChange()"
             >
-            <button 
-              *ngIf="searchTerm" 
-              class="btn btn-outline-secondary" 
+            <button
+              *ngIf="searchTerm"
+              class="btn btn-outline-secondary"
               type="button"
               (click)="clearSearch()"
               title="Clear search"
@@ -76,15 +76,15 @@
                 <i class="fas fa-filter me-1"></i>
                 Advanced filters applied
               </span>
-              <button 
-                class="btn btn-sm btn-link text-danger p-0" 
+              <button
+                class="btn btn-sm btn-link text-danger p-0"
                 (click)="clearAdvancedSearch()"
                 title="Clear advanced filters"
               >
                 <i class="fas fa-times"></i>
               </button>
             </div>
-            <button 
+            <button
               class="btn btn-outline-primary btn-sm ms-auto"
               type="button"
               (click)="openAdvancedSearchModal()"
@@ -106,7 +106,7 @@
 
           <!-- Orphan List -->
           <div *ngIf="!isLoading" class="orphan-list">
-            <div 
+            <div
               *ngFor="let orphan of filteredOrphans; trackBy: trackByOrphanId"
               class="orphan-item"
               [class.active]="selectedOrphan?.id === orphan.id"
@@ -114,8 +114,8 @@
             >
               <div class="d-flex align-items-center">
                 <div class="orphan-photo me-3">
-                  <img 
-                    [src]="getOrphanPhotoUrl(orphan.photo)" 
+                  <img
+                    [src]="getOrphanPhotoUrl(orphan.photo)"
                     [alt]="getFullName(orphan)"
                     class="rounded-circle"
                     (error)="onImageError($event)"
@@ -138,7 +138,11 @@
                       <i class="fas fa-heart me-1"></i>Sponsored
                     </span>
                     <small class="text-muted d-block mt-1" *ngIf="orphan.sponsorships && orphan.sponsorships.length > 0">
-                      <i class="fas fa-user me-1"></i>Sponsors: {{ orphan.sponsorships.length }}
+                      <i class="fas fa-user me-1"></i>
+
+                      Sponsors: {{
+                        getActiveOrOnHoldSponsorCount(orphan)
+                      }}
                     </small>
                   </div>
                   <div *ngIf="!orphan.isSponsored" class="mt-1">
@@ -146,7 +150,7 @@
                       <i class="fas fa-exclamation-triangle me-1"></i>Not Sponsored
                     </span>
                   </div>
-                  
+
                   <!-- Legacy Kafala Information (can be removed once migration is complete) -->
                   <div *ngIf="orphan.hasKafala && orphan.isSponsored === undefined" class="mt-1">
                     <span class="badge bg-info me-1">
@@ -155,15 +159,15 @@
                   </div>
                 </div>
                 <div class="orphan-actions">
-                  <button 
-                    class="btn btn-sm btn-outline-info me-1" 
+                  <button
+                    class="btn btn-sm btn-outline-info me-1"
                     (click)="viewIdCard(orphan.id); $event.stopPropagation()"
                     title="View ID Card"
                   >
                     <i class="fas fa-id-card"></i>
                   </button>
-                  <button 
-                    class="btn btn-sm btn-outline-danger" 
+                  <button
+                    class="btn btn-sm btn-outline-danger"
                     (click)="deleteOrphan(orphan.id); $event.stopPropagation()"
                     title="Delete Orphan"
                   >
@@ -175,7 +179,7 @@
 
             <!-- Load More Button -->
             <div *ngIf="filteredOrphans.length > 0 && hasMoreData && !allOrphansLoaded" class="text-center p-3 border-top">
-              <button 
+              <button
                 class="btn btn-outline-primary btn-sm"
                 (click)="loadMoreOrphans()"
                 [disabled]="isLoadingMore"
@@ -217,14 +221,14 @@
               {{ isCreating ? 'Add New Orphan' : 'Edit Orphan Details' }}
             </h6>
             <div>
-              <button 
+              <button
                 class="btn btn-outline-secondary me-2"
                 (click)="cancelEdit()"
                 [disabled]="isLoading"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 class="btn btn-primary"
                 (click)="saveOrphan()"
                 [disabled]="orphanForm.invalid || isLoading"
@@ -241,7 +245,7 @@
             <!-- Section Tabs -->
             <ul class="nav nav-pills nav-fill mb-4">
               <li class="nav-item">
-                <button 
+                <button
                   class="nav-link"
                   [class.active]="activeSection === 'basic'"
                   (click)="setActiveSection('basic')"
@@ -252,7 +256,7 @@
                 </button>
               </li>
               <li class="nav-item">
-                <button 
+                <button
                   class="nav-link"
                   [class.active]="activeSection === 'family'"
                   (click)="setActiveSection('family')"
@@ -263,7 +267,7 @@
                 </button>
               </li>
               <li class="nav-item">
-                <button 
+                <button
                   class="nav-link"
                   [class.active]="activeSection === 'education'"
                   (click)="setActiveSection('education')"
@@ -274,7 +278,7 @@
                 </button>
               </li>
               <li class="nav-item">
-                <button 
+                <button
                   class="nav-link"
                   [class.active]="activeSection === 'sponsorship'"
                   (click)="setActiveSection('sponsorship')"
@@ -285,7 +289,7 @@
                 </button>
               </li>
               <li class="nav-item">
-                <button 
+                <button
                   class="nav-link"
                   [class.active]="activeSection === 'gifts'"
                   (click)="setActiveSection('gifts')"
@@ -305,7 +309,7 @@
                   <div class="text-center">
                     <div class="photo-upload-container">
                       <div class="photo-preview mb-3">
-                        <img 
+                        <img
                           [src]="getPhotoPreviewUrl()"
                           alt="Orphan Photo"
                           class="img-fluid rounded"
@@ -313,16 +317,16 @@
                           style="width: 150px; height: 150px; object-fit: cover;"
                         >
                       </div>
-                      <input 
-                        type="file" 
-                        id="photoInput" 
+                      <input
+                        type="file"
+                        id="photoInput"
                         class="d-none"
                         accept="image/*"
                         (change)="onPhotoSelected($event)"
                         #photoInput
                       >
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         class="btn btn-outline-primary btn-sm"
                         (click)="photoInput.click()"
                       >
@@ -344,8 +348,8 @@
                   <div class="row">
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Orphan ID *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="orphanId"
                         [class.is-invalid]="orphanForm.get('orphanId')?.invalid && orphanForm.get('orphanId')?.touched"
@@ -356,7 +360,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Gender *</label>
-                      <select 
+                      <select
                         class="form-select"
                         formControlName="gender"
                         [class.is-invalid]="orphanForm.get('gender')?.invalid && orphanForm.get('gender')?.touched"
@@ -371,8 +375,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">First Name *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="firstName"
                         [class.is-invalid]="orphanForm.get('firstName')?.invalid && orphanForm.get('firstName')?.touched"
@@ -383,8 +387,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Last Name *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="lastName"
                         [class.is-invalid]="orphanForm.get('lastName')?.invalid && orphanForm.get('lastName')?.touched"
@@ -397,9 +401,9 @@
                       <label class="form-label">Date of Birth *</label>
                       <mat-form-field appearance="outline" class="w-100">
                         <mat-label>Date of Birth</mat-label>
-                        <input 
-                          matInput 
-                          [matDatepicker]="dobPicker" 
+                        <input
+                          matInput
+                          [matDatepicker]="dobPicker"
                           formControlName="dob"
                           placeholder="MM/dd/yyyy"
                           readonly
@@ -414,8 +418,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Place of Birth *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="placeOfBirth"
                         [class.is-invalid]="orphanForm.get('placeOfBirth')?.invalid && orphanForm.get('placeOfBirth')?.touched"
@@ -426,8 +430,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Location *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="location"
                         [class.is-invalid]="orphanForm.get('location')?.invalid && orphanForm.get('location')?.touched"
@@ -438,8 +442,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Country *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="country"
                         [class.is-invalid]="orphanForm.get('country')?.invalid && orphanForm.get('country')?.touched"
@@ -450,7 +454,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Health Status *</label>
-                      <select 
+                      <select
                         class="form-select"
                         formControlName="healthStatus"
                         [class.is-invalid]="orphanForm.get('healthStatus')?.invalid && orphanForm.get('healthStatus')?.touched"
@@ -468,8 +472,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Special Needs</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         class="form-control"
                         formControlName="specialNeeds"
                         placeholder="Any special needs or disabilities"
@@ -527,9 +531,9 @@
                 <div class="col-md-6 mb-3">
                   <mat-form-field appearance="outline" class="w-100">
                     <mat-label>Father's Date of Death</mat-label>
-                    <input 
-                      matInput 
-                      [matDatepicker]="fatherDeathPicker" 
+                    <input
+                      matInput
+                      [matDatepicker]="fatherDeathPicker"
                       formControlName="fatherDateOfDeath"
                       placeholder="MM/dd/yyyy"
                       readonly
@@ -558,9 +562,9 @@
                 <div class="col-md-6 mb-3">
                   <mat-form-field appearance="outline" class="w-100">
                     <mat-label>Mother's Date of Death</mat-label>
-                    <input 
-                      matInput 
-                      [matDatepicker]="motherDeathPicker" 
+                    <input
+                      matInput
+                      [matDatepicker]="motherDeathPicker"
                       formControlName="motherDateOfDeath"
                       placeholder="MM/dd/yyyy"
                       readonly
@@ -649,8 +653,8 @@
               <div class="row">
                 <!-- Add New Donor Button -->
                 <div class="col-12 mb-4">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     class="btn me-2"
                     [ngClass]="{'btn-success': !isOrphanSponsored(), 'btn-outline-success': isOrphanSponsored()}"
                     (click)="openAddDonorForm()"
@@ -660,8 +664,8 @@
                     <span *ngIf="!isOrphanSponsored()">Add Sponsor</span>
                     <span *ngIf="isOrphanSponsored()">Add Additional Sponsor</span>
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     class="btn btn-outline-primary"
                     (click)="openSelectDonorForm()"
                     [disabled]="isOrphanSponsored()"
@@ -714,7 +718,7 @@
                               <td>{{ formatDate(sponsorship.startDate) }}</td>
                               <td>
                                 <span class="badge" [ngClass]="{
-                                  'bg-success': getSponsorshipStatus(sponsorship) === 'ACTIVE', 
+                                  'bg-success': getSponsorshipStatus(sponsorship) === 'ACTIVE',
                                   'bg-secondary': getSponsorshipStatus(sponsorship) === 'EXPIRED',
                                   'bg-danger': getSponsorshipStatus(sponsorship) === 'CANCELLED',
                                   'bg-warning text-dark': getSponsorshipStatus(sponsorship) === 'ON_HOLD'
@@ -725,36 +729,36 @@
                               <!-- <td>{{ sponsorship.gifts?.length || 0 }}</td> -->
                               <td>
                                 <div class="btn-group">
-                                  <button 
+                                  <button
                                     *ngIf="getSponsorshipStatus(sponsorship) === 'ACTIVE'"
-                                    type="button" 
+                                    type="button"
                                     class="btn btn-sm btn-outline-primary me-2"
                                     (click)="editSponsorship(sponsorship)"
                                     title="Edit Sponsorship"
                                   >
                                     <i class="fas fa-edit"></i> Edit
                                   </button>
-                                  <button 
+                                  <button
                                     *ngIf="getSponsorshipStatus(sponsorship) === 'ACTIVE'"
-                                    type="button" 
+                                    type="button"
                                     class="btn btn-sm btn-outline-warning me-1"
                                     (click)="putSponsorshipOnHold(sponsorship)"
                                     title="Put Sponsorship On Hold"
                                   >
                                     <i class="fas fa-pause"></i> On Hold
                                   </button>
-                                  <button 
+                                  <button
                                     *ngIf="getSponsorshipStatus(sponsorship) === 'ON_HOLD'"
-                                    type="button" 
+                                    type="button"
                                     class="btn btn-sm btn-outline-success me-1"
                                     (click)="reactivateSponsorship(sponsorship)"
                                     title="Reactivate Sponsorship"
                                   >
                                     <i class="fas fa-play"></i> Reactivate
                                   </button>
-                                  <button 
+                                  <button
                                     *ngIf="getSponsorshipStatus(sponsorship) === 'ACTIVE'"
-                                    type="button" 
+                                    type="button"
                                     class="btn btn-sm btn-outline-danger"
                                     (click)="cancelSponsorship(sponsorship)"
                                     title="Cancel Sponsorship"
@@ -782,7 +786,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- No Sponsorships Message -->
                 <div class="col-12" *ngIf="!selectedOrphan || !selectedOrphan.sponsorships || selectedOrphan.sponsorships.length === 0">
                   <div class="text-center text-muted py-5">
@@ -799,8 +803,8 @@
               <div class="row">
                 <!-- Add Gift Button -->
                 <div class="col-12 mb-4">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     class="btn btn-primary me-2"
                     (click)="openAddGiftForm()"
                     [disabled]="!selectedOrphan"
@@ -808,8 +812,8 @@
                     <i class="fas fa-plus me-2"></i>
                     Add New Gift
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     class="btn btn-outline-secondary"
                     (click)="loadSponsorships()"
                   >
@@ -934,13 +938,13 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
               <div>
-                <button 
-                  type="button" 
-                  class="btn btn-outline-secondary me-2" 
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary me-2"
                   (click)="debugFormValidation()"
                 >
                   <i class="fas fa-bug me-2"></i>
@@ -948,17 +952,17 @@
                 </button>
               </div>
               <div>
-                <button 
-                  type="button" 
-                  class="btn btn-secondary me-2" 
+                <button
+                  type="button"
+                  class="btn btn-secondary me-2"
                   (click)="cancelEdit()"
                 >
                   <i class="fas fa-times me-2"></i>
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  class="btn btn-primary" 
+                <button
+                  type="button"
+                  class="btn btn-primary"
                   (click)="saveOrphan()"
                   [disabled]="isLoading"
                 >
@@ -1017,8 +1021,8 @@
                     <li>Optional columns: Family Information and Education details</li>
                   </ul>
                 </div>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   class="btn btn-outline-primary btn-sm"
                   (click)="downloadTemplate()"
                   title="Download Excel template with examples">
@@ -1028,7 +1032,7 @@
             </div>
 
             <!-- File Upload Area -->
-            <div class="upload-area" 
+            <div class="upload-area"
                  [class.dragover]="isDragOver"
                  (dragover)="onDragOver($event)"
                  (dragleave)="onDragLeave($event)"
@@ -1038,10 +1042,10 @@
                 <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                 <h5>Drag and drop your Excel file here</h5>
                 <p class="text-muted">or click to browse files</p>
-                <input 
+                <input
                   #fileInput
-                  type="file" 
-                  class="d-none" 
+                  type="file"
+                  class="d-none"
                   accept=".xlsx,.xls"
                   (change)="onFileSelected($event)"
                 >
@@ -1060,8 +1064,8 @@
                         <small class="text-muted">{{ formatFileSize(selectedFile.size) }}</small>
                       </div>
                     </div>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       class="btn btn-sm btn-outline-danger"
                       (click)="removeSelectedFile()"
                     >
@@ -1075,9 +1079,9 @@
             <!-- Upload Progress -->
             <div *ngIf="uploadProgress > 0 && uploadProgress < 100" class="mt-3">
               <div class="progress">
-                <div 
-                  class="progress-bar progress-bar-striped progress-bar-animated" 
-                  role="progressbar" 
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
                   [style.width.%]="uploadProgress"
                 >
                   {{ uploadProgress }}%
@@ -1102,17 +1106,17 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
+        <button
+          type="button"
+          class="btn btn-secondary"
           (click)="closeUploadModal()"
           [disabled]="isUploading"
         >
           Cancel
         </button>
-        <button 
-          type="button" 
-          class="btn btn-success" 
+        <button
+          type="button"
+          class="btn btn-success"
           (click)="uploadFile()"
           [disabled]="!selectedFile || isUploading"
         >
@@ -1154,7 +1158,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Gift Type Selection -->
             <div class="col-md-6">
               <div class="mb-3">
@@ -1172,7 +1176,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Custom Gift Type Name -->
           <div class="row" *ngIf="giftForm.get('giftTypeId')?.value === 'custom'">
             <div class="col-md-6">
@@ -1185,7 +1189,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="row">
             <!-- Amount -->
             <div class="col-md-6">
@@ -1200,7 +1204,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Date -->
             <div class="col-md-6">
               <div class="mb-3">
@@ -1212,7 +1216,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Beneficiary Type -->
           <div class="mb-3">
             <label class="form-label">Who benefits from this gift? *</label>
@@ -1246,7 +1250,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Project Selection -->
           <div class="row" *ngIf="beneficiaryType === BeneficiaryType.PROJECT">
             <div class="col-md-6">
@@ -1264,19 +1268,19 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Description -->
           <div class="mb-3">
             <label for="description" class="form-label">Description</label>
             <textarea class="form-control" id="description" formControlName="description" rows="2" placeholder="Optional notes about this gift..."></textarea>
           </div>
-          
+
           <!-- Error/Success Messages -->
           <div *ngIf="giftError" class="alert alert-danger">
             <i class="fas fa-exclamation-triangle me-2"></i>
             {{ giftError }}
           </div>
-          
+
           <div *ngIf="giftSuccess" class="alert alert-success">
             <i class="fas fa-check-circle me-2"></i>
             {{ giftSuccess }}
@@ -1315,12 +1319,12 @@
           </div>
           <p class="mt-2 text-muted">Loading gift history...</p>
         </div>
-        
+
         <div *ngIf="modalGifts.length === 0 && !isLoadingModalGifts" class="text-center p-4">
           <i class="fas fa-gift fa-3x text-muted mb-3"></i>
           <p class="text-muted">No gifts found for this orphan</p>
         </div>
-        
+
         <div *ngIf="modalGifts.length > 0 && !isLoadingModalGifts">
           <div class="table-responsive">
             <table class="table table-striped">
@@ -1358,8 +1362,8 @@
                   </td>
                   <td>{{ gift.description || '-' }}</td>
                   <td>
-                    <button class="btn btn-sm btn-outline-danger" 
-                            (click)="deleteGift(gift.id!)" 
+                    <button class="btn btn-sm btn-outline-danger"
+                            (click)="deleteGift(gift.id!)"
                             title="Delete Gift">
                       <i class="fas fa-trash"></i>
                     </button>
@@ -1415,9 +1419,9 @@
             <!-- Custom Gift Type Name -->
             <div class="col-12 mb-3" *ngIf="orphanGiftForm.get('giftTypeId')?.value === 'custom'">
               <label class="form-label">New Gift Type Name *</label>
-              <input 
-                type="text" 
-                class="form-control" 
+              <input
+                type="text"
+                class="form-control"
                 formControlName="customGiftTypeName"
                 placeholder="Enter new gift type name"
               >
@@ -1429,9 +1433,9 @@
             <!-- Gift Name -->
             <div class="col-md-6 mb-3">
               <label class="form-label">Gift Name *</label>
-              <input 
-                type="text" 
-                class="form-control" 
+              <input
+                type="text"
+                class="form-control"
                 formControlName="giftName"
                 placeholder="Enter gift name"
                 required
@@ -1446,9 +1450,9 @@
               <label class="form-label">Gift Value *</label>
               <div class="input-group">
                 <span class="input-group-text">$</span>
-                <input 
-                  type="number" 
-                  class="form-control" 
+                <input
+                  type="number"
+                  class="form-control"
                   formControlName="giftValue"
                   placeholder="0.00"
                   min="0"
@@ -1464,9 +1468,9 @@
             <!-- Gift Date -->
             <div class="col-md-6 mb-3">
               <label class="form-label">Gift Date *</label>
-              <input 
-                type="date" 
-                class="form-control" 
+              <input
+                type="date"
+                class="form-control"
                 formControlName="giftDate"
                 required
               >
@@ -1478,8 +1482,8 @@
             <!-- Description -->
             <div class="col-12 mb-3">
               <label class="form-label">Description</label>
-              <textarea 
-                class="form-control" 
+              <textarea
+                class="form-control"
                 formControlName="description"
                 rows="3"
                 placeholder="Optional description or notes about the gift"
@@ -1492,9 +1496,9 @@
         <button type="button" class="btn btn-secondary" (click)="closeGiftModal()">
           Cancel
         </button>
-        <button 
-          type="button" 
-          class="btn btn-primary" 
+        <button
+          type="button"
+          class="btn btn-primary"
           (click)="submitOrphanGiftForm()"
           [disabled]="orphanGiftForm.invalid || isSubmittingGift"
         >
@@ -1741,7 +1745,7 @@
         </h5>
         <button type="button" class="btn-close" (click)="closeAdvancedSearchModal()"></button>
       </div>
-      
+
       <form [formGroup]="advancedSearchForm" (ngSubmit)="applyAdvancedSearch()">
         <div class="modal-body">
           <div class="row">
@@ -1896,7 +1900,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary me-2" (click)="resetAdvancedSearch()">
             <i class="fas fa-undo me-2"></i>

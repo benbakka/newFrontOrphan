@@ -13,17 +13,17 @@ export interface OrphanDetailDTO {
   specialNeeds: string;
   familyInformation?: FamilyInformationDTO;
   education?: EducationDTO;
-  
+
   // Kafala Information (legacy)
   kafalaAmount?: number;
   kafalaFrequency?: string;
   donorName?: string;
   donorId?: number;
   hasKafala?: boolean;
-  
+
   // Dynamic Sponsorship Status
   isSponsored?: boolean;
-  
+
   // New Sponsorship Information
   sponsorships?: SponsorshipInfo[];
   currentSponsorship?: SponsorshipInfo;

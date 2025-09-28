@@ -9,11 +9,11 @@ export interface OrphanListDTO {
   location: string;
   country: string;
   healthStatus: string;
-  
+
   // rmation
   isSponsored?: boolean;
   sponsorships?: SponsorshipInfo[];
-  
+
   // Legacy Kafala Information (to be deprecated)
   kafalaAmount?: number;
   kafalaFrequency?: string;
@@ -29,6 +29,7 @@ export interface SponsorshipInfo {
   orphanName?: string;
   donorName?: string;
   sponsorshipType: string;
+  status?: string;
   startDate: string;
   endDate?: string;
   gifts?: any[];
