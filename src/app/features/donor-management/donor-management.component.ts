@@ -13,11 +13,11 @@ import { GiftService } from '../../core/services/gift.service';
 import { OrphanService } from '../../core/services/orphan.service';
 import { OrphanListDTO } from '../../core/models/orphan-list.dto';
 import { DonationService } from '../../core/services/donation.service';
-import { 
-  Donation, 
-  DonorBalance, 
+import {
+  Donation,
+  DonorBalance,
   DonorStatistics,
-  CreateDonationRequest 
+  CreateDonationRequest
 } from '../../core/models/donation.model';
 import { GiftTypeService } from '../../core/services/gift-type.service';
 import { GiftType } from '../../core/models/gift-type.model';
@@ -109,12 +109,12 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   filteredDonors: Donor[] = [];
   searchTerm: string = '';
   isLoading: boolean = false;
-  
+
   // UI state
   isEditing = false;
   isCreating = false;
   showDonorList = true;
-  
+
   // Missing property declarations
   donorSponsorships: Sponsorship[] = [];
   donorGifts: Gift[] = [];
@@ -136,7 +136,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   selectedGiftTypeId: number | null = null;
   selectedGiftTypeBalance: number | null = null;
   activeTab: string = 'sponsorships';
-  
+
   // Upload modal properties
   selectedFile: File | null = null;
   uploadProgress: number = 0;
@@ -145,7 +145,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   isUploading: boolean = false;
   dragOver: boolean = false;
   apiUrl: string = environment.apiUrl;
-  
+
   // Email form properties
   emailForm: FormGroup;
   showEmailForm: boolean = false;
@@ -172,13 +172,13 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     { value: 11, name: 'December' }
   ];
   noDonationsMessage: string = '';
-  
+
   // Advanced search properties
   isAdvancedSearchModalVisible = false;
   advancedSearchForm: FormGroup;
   isAdvancedSearching = false;
   isAdvancedSearchApplied = false;
-  
+
   // Form state variables
   isFormVisible = false;
   isEditMode = false;
@@ -186,11 +186,11 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   selectedDonor: Donor | null = null;
   selectedDonorDetail: DonorDetailDTO | null = null;
   isLoadingDonorDetail = false;
-  
+
   // Donation edit tracking
   editingDonationId: number | null = null;
   isDonationEditMode = false;
-  
+
   // Form visibility flags
   showDonorForm = false;
   showGiftForm = false;
@@ -199,22 +199,23 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   isUploadModalVisible: boolean = false;
   isGiftFormVisible: boolean = false;
   isDonationFormVisible: boolean = false;
-  
+
   // Form groups
   donorForm: FormGroup;
   giftForm: FormGroup;
   donationForm: FormGroup;
-  
+  formattedGiftTypeAmounts: Map<number, string> = new Map();
+
   // Form submission states
   isSubmittingDonor = false;
   isSubmittingGift = false;
   isSubmittingDonation = false;
-  
+
   // Form feedback messages
   donorError: string | null = null;
   donorSuccess: boolean = false;
   giftError: string | null = null;
-  
+
   // Email functionality
   isEmailFormVisible = false;
   emailStartDate: string = '';
@@ -233,7 +234,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   historySearchTerm: string = '';
   historySortBy: 'date' | 'amount' | 'type' = 'date';
   sortOrder: 'asc' | 'desc' = 'desc';
-  
+
   // Statistics
   periodStats: PeriodStats = {
     totalDonations: 0,
@@ -241,14 +242,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     highestDonation: 0,
     averagePerMonth: 0
   };
-  
+
   donationInsights: DonationInsights = {
     frequency: 'N/A',
     topFund: 'N/A',
     growth: 0,
     consistencyScore: 0
   };
-  
+
   // Donor statistics from backend
   donorStatistics: any = {
     totalOrphansSponsored: 0,
@@ -258,8 +259,8 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     totalDonations: 0,
     totalGifts: 0
   };
-  
-  
+
+
   // ViewChild for file input
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
@@ -293,7 +294,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       country: [''],
       company: ['']
     });
-    
+
     this.giftForm = this.fb.group({
       giftTypeId: ['', Validators.required],
       amount: ['', [Validators.required, Validators.min(0.01)]],
@@ -304,7 +305,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       projectId: [''],
       customGiftTypeName: [''] // For custom gift type
     });
-    
+
     this.donationForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(0.01)]],
       donationDate: [new Date().toISOString().split('T')[0], Validators.required],
@@ -314,15 +315,15 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       referenceNumber: [{value: '', disabled: true}], // Disabled as it's auto-generated
       customGiftTypeName: ['']
     });
-    
+
     this.advancedSearchForm = this.createAdvancedSearchForm();
-    
+
     // Initialize email form with Date objects for Material datepicker
     this.emailForm = this.fb.group({
       startDate: [new Date(new Date().getFullYear(), 0, 1), Validators.required],
       endDate: [new Date(), Validators.required]
     });
-    
+
     // Initialize available years for email reports
     this.initializeAvailableYears();
   }
@@ -334,7 +335,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.loadProjects();
     this.loadOrphans();
     this.initializeDateRanges();
-    
+
     // Clear any hardcoded data
     this.historyData = [];
     this.filteredHistoryData = [];
@@ -347,23 +348,23 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   ngOnDestroy(): void {
     // Component cleanup
   }
-  
+
   loadDonorDetails(donorId: number): void {
     this.isLoadingDonorDetail = true;
-    
+
     // Reset data before loading new donor
     this.resetDonorData();
-    
+    this.loadAmountPerDonor(donorId)
     this.donorService.getDonorDetails(donorId).subscribe({
       next: (donorDetail) => {
         this.selectedDonor = donorDetail;
         this.selectedDonorDetail = donorDetail;
-        
+
         // Load donor statistics if available
         if (donorDetail.statistics) {
           this.donorStatistics = donorDetail.statistics;
         }
-        
+
         this.loadDonorSponsorships(donorId);
         this.loadDonorGifts(donorId);
         this.loadDonorDonations(donorId);
@@ -372,7 +373,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       error: (error: any) => {
         console.error('Error loading donor details:', error);
         this.isLoadingDonorDetail = false;
-        
+
         // Fallback to basic donor info if detailed info fails
         this.donorService.getDonorById(donorId).subscribe({
           next: (donor) => {
@@ -403,7 +404,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       }
     });
   }
-  
+
   loadDonorSponsorships(donorId: number): void {
     this.sponsorshipService.getSponsorshipsByDonorId(donorId).subscribe({
       next: (sponsorships: Sponsorship[]) => {
@@ -414,7 +415,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       }
     });
   }
-  
+
   loadDonorGifts(donorId: number): void {
     this.giftService.getGiftsByDonor(donorId).subscribe({
       next: (gifts: Gift[]) => {
@@ -428,7 +429,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       }
     });
   }
-  
+
   loadDonorDonations(donorId: number): void {
     this.donationService.getDonationsByDonorId(donorId).subscribe({
       next: (donations: Donation[]) => {
@@ -444,13 +445,13 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       }
     });
   }
-  
+
   calculateDonorBalance(): void {
     // Calculate total donations minus total gifts
     const totalDonations = this.donorDonations.reduce((sum, donation) => sum + donation.amount, 0);
     const totalGifts = this.donorGifts.reduce((sum, gift) => sum + gift.amount, 0);
     this.donorBalance = totalDonations - totalGifts;
-    
+
     // Update donor statistics
     this.donorStatistics.currentDonationBalance = this.donorBalance;
     this.donorStatistics.totalDonations = totalDonations;
@@ -530,12 +531,12 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   onBeneficiaryTypeChange(type: 'orphan' | 'project' | 'charity'): void {
-    this.beneficiaryType = type === 'orphan' ? BeneficiaryType.ORPHAN : 
-                          type === 'project' ? BeneficiaryType.PROJECT : 
+    this.beneficiaryType = type === 'orphan' ? BeneficiaryType.ORPHAN :
+                          type === 'project' ? BeneficiaryType.PROJECT :
                           BeneficiaryType.CHARITY;
     this.giftLinkType = type; // Keep giftLinkType in sync with beneficiaryType
     this.updateGiftFormValidators();
-    
+
     // Load projects when charity project is selected and ensure they're available
     if (type === 'project') {
       console.log('Project beneficiary selected, checking available projects:', this.availableProjects.length);
@@ -549,8 +550,8 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   // Added to match template references
   onGiftLinkTypeChange(type: 'orphan' | 'project' | 'charity'): void {
     this.giftLinkType = type;
-    this.beneficiaryType = type === 'orphan' ? BeneficiaryType.ORPHAN : 
-                          type === 'project' ? BeneficiaryType.PROJECT : 
+    this.beneficiaryType = type === 'orphan' ? BeneficiaryType.ORPHAN :
+                          type === 'project' ? BeneficiaryType.PROJECT :
                           BeneficiaryType.CHARITY; // Keep beneficiaryType in sync with giftLinkType
     this.updateGiftFormValidators();
   }
@@ -559,7 +560,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     // Reset form controls
     this.giftForm.get('orphanId')?.clearValidators();
     this.giftForm.get('projectId')?.clearValidators();
-    
+
     // Apply validators based on beneficiary type
     if (this.beneficiaryType === BeneficiaryType.ORPHAN) {
       this.giftForm.get('orphanId')?.setValidators([Validators.required]);
@@ -575,7 +576,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   processGiftSubmission(giftTypeId: number): void {
     const formValues = this.giftForm.value;
-    
+
     // Check balance before creating gift
     this.giftService.checkGiftTypeBalance(giftTypeId, +formValues.amount).subscribe({
       next: (hasSufficientBalance) => {
@@ -583,7 +584,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
           this.giftError = 'There is not enough balance for this type of gift';
           return;
         }
-        
+
         const giftRequest: CreateGiftRequestV2 = {
           donorId: this.selectedDonor?.id!,
           giftTypeId: giftTypeId,
@@ -593,14 +594,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
           description: formValues.description || undefined,
           beneficiaryType: this.beneficiaryType as 'orphan' | 'project' | 'charity'
         };
-        
+
         // Add beneficiary-specific fields
         if (this.beneficiaryType === BeneficiaryType.ORPHAN && formValues.orphanId) {
           giftRequest.orphanId = +formValues.orphanId;
         } else if (this.beneficiaryType === BeneficiaryType.PROJECT && formValues.projectId) {
           giftRequest.projectId = +formValues.projectId;
         }
-        
+
         this.isSubmittingGift = true;
         this.giftService.createGiftV2(giftRequest).subscribe({
           next: (response) => {
@@ -646,7 +647,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.updateGiftFormValidators();
     }
   }
-  
+
   toggleDonationForm(): void {
     this.isDonationFormVisible = !this.isDonationFormVisible;
     this.showDonationForm = this.isDonationFormVisible;
@@ -654,7 +655,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.resetDonationForm();
     }
   }
-  
+
   resetDonationForm(): void {
     // Reset all fields except referenceNumber which is handled separately
     this.donationForm.reset({
@@ -669,7 +670,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.isDonationFormVisible = false;
     this.donationError = null;
     this.donationSuccess = false;
-    
+
     // Reset edit mode tracking
     this.isDonationEditMode = false;
     this.editingDonationId = null;
@@ -677,14 +678,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   onDonationGiftTypeChange(): void {
     const giftTypeId = this.donationForm.get('giftTypeId')?.value;
-    
+
     if (giftTypeId === 'custom') {
       this.donationForm.get('customGiftTypeName')?.setValidators([Validators.required]);
     } else {
       this.donationForm.get('customGiftTypeName')?.clearValidators();
       this.donationForm.get('customGiftTypeName')?.reset();
     }
-    
+
     this.donationForm.get('customGiftTypeName')?.updateValueAndValidity();
   }
 
@@ -722,12 +723,12 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.giftForm.markAllAsTouched();
       return;
     }
-    
+
     this.giftError = null;
     this.giftSuccess = false;
 
     const formValues = this.giftForm.value;
-    
+
     // Handle custom gift type if selected
     let giftTypeId = formValues.giftTypeId;
     if (giftTypeId === 'custom' && formValues.customGiftTypeName) {
@@ -757,7 +758,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.donationForm.markAllAsTouched();
       return;
     }
-    
+
     this.donationError = null;
     this.donationSuccess = false;
     this.isSubmittingDonation = true;
@@ -770,7 +771,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.isSubmittingDonation = false;
       return;
     }
-    
+
     const donationRequest: CreateDonationRequest = {
       donorId: this.selectedDonor.id,
       amount: +formValues.amount,
@@ -780,7 +781,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       // Reference number will be auto-generated by backend if empty
       referenceNumber: undefined
     };
-    
+
     // Handle gift type selection - ensure at least one is provided
     if (formValues.giftTypeId === 'custom' && formValues.customGiftTypeName) {
       donationRequest.giftTypeName = formValues.customGiftTypeName;
@@ -822,6 +823,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
           this.loadDonorDonations(this.selectedDonor?.id as number);
           this.loadGiftTypes(); // Reload gift types to update balances
           this.calculateDonorBalance();
+          this.loadAmountPerDonor(this.selectedDonor?.id as number);
         },
         error: (error: any) => {
           this.donationError = 'Error adding donation: ' + (error.error?.message || error.message || 'Unknown error');
@@ -834,14 +836,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   filterDonors(searchTerm?: string): void {
     // If searchTerm is provided as a parameter, use it, otherwise use the class property
     const term = searchTerm !== undefined ? searchTerm : this.searchTerm;
-    
+
     if (!term || !term.trim()) {
       this.filteredDonors = [...this.donors];
       return;
     }
 
     const searchTermLower = term.toLowerCase().trim();
-    this.filteredDonors = this.donors.filter(donor => 
+    this.filteredDonors = this.donors.filter(donor =>
       (donor.firstName && donor.firstName.toLowerCase().includes(searchTermLower)) ||
       (donor.lastName && donor.lastName.toLowerCase().includes(searchTermLower)) ||
       (donor.email && donor.email.toLowerCase().includes(searchTermLower)) ||
@@ -851,7 +853,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       (donor.donorId && donor.donorId.toLowerCase().includes(searchTermLower))
     );
   }
-  
+
   selectDonor(donor: Donor): void {
     if (donor.id !== undefined) {
       // Reset any previous donor details before loading new ones
@@ -861,12 +863,12 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.donorDonations = [];
       this.donorSponsorshipGifts = [];
       this.donorBalance = 0;
-      
+
       // Load the donor details
       this.loadDonorDetails(donor.id);
     }
   }
-  
+
   trackByDonorId(index: number, donor: Donor): number {
     return donor.id ?? -1; // Return -1 if id is undefined
   }
@@ -880,7 +882,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.donorSuccess = false;
     this.isSubmittingDonor = false;
   }
-  
+
   closeForm(): void {
     this.isFormVisible = false;
     this.donorForm.reset();
@@ -889,7 +891,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.isEditMode = false;
     this.editingDonorId = null;
   }
-  
+
   editDonor(donor: Donor): void {
     this.isEditMode = true;
     this.editingDonorId = donor.id ?? null;
@@ -913,7 +915,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   deleteDonor(donorId: number): void {
     const donor = this.donors.find(d => d.id === donorId);
     if (!donor) return;
-    
+
     if (confirm(`Are you sure you want to delete ${donor.firstName} ${donor.lastName}?`)) {
       this.donorService.deleteDonor(donorId).subscribe({
         next: () => {
@@ -934,12 +936,12 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     if (this.donors.length === 0) {
       return;
     }
-    
+
     const confirmMessage = `Are you sure you want to delete ALL ${this.donors.length} donors? This action cannot be undone.`;
-    
+
     if (confirm(confirmMessage)) {
       this.isLoading = true;
-      
+
       // Call backend service to delete all donors
       this.donorService.deleteAllDonors().subscribe({
         next: () => {
@@ -948,14 +950,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
           this.selectedDonor = null;
           this.selectedDonorDetail = null;
           this.isLoading = false;
-          
+
           // Show success message
           alert('All donors have been deleted successfully.');
         },
         error: (error: any) => {
           console.error('Error deleting all donors:', error);
           this.isLoading = false;
-          
+
           // Show error message
           alert('Error deleting donors: ' + (error.error?.message || error.message || 'Unknown error'));
         }
@@ -968,13 +970,13 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.donorForm.markAllAsTouched();
       return;
     }
-    
+
     // Reset any previous error/success messages
     this.donorError = null;
     this.donorSuccess = false;
     this.isSubmittingDonor = true;
     const donorData = this.donorForm.value;
-    
+
     if (this.isEditMode) {
       this.donorService.updateDonor(this.editingDonorId!, donorData).subscribe({
         next: (updatedDonor) => {
@@ -1050,7 +1052,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     event.preventDefault();
     event.stopPropagation();
     this.dragOver = false;
-    
+
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       this.selectedFile = files[0];
@@ -1073,14 +1075,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.uploadError = 'Please select a file to upload';
       return;
     }
-    
+
     this.isUploading = true;
     this.uploadProgress = 0;
     this.uploadError = null;
-    
+
     const formData = new FormData();
     formData.append('file', this.selectedFile);
-    
+
     // Use HttpClient directly for file upload since uploadDonorsExcel doesn't exist
     this.http.post<any>(`${this.apiUrl}/api/donors/upload`, formData, {
       reportProgress: true,
@@ -1110,23 +1112,23 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   getSponsorshipStatus(sponsorship: Sponsorship): string {
     const now = new Date();
     const endDate = sponsorship.endDate ? new Date(sponsorship.endDate) : null;
-    
+
     if (!endDate) {
       return 'Active';
     }
-    
+
     if (endDate < now) {
       return 'Expired';
     }
-    
+
     // If end date is within 30 days
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(now.getDate() + 30);
-    
+
     if (endDate <= thirtyDaysFromNow) {
       return 'Expiring Soon';
     }
-    
+
     return 'Active';
   }
 
@@ -1134,10 +1136,10 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     if (!sponsorship.endDate) {
       return true;
     }
-    
+
     const now = new Date();
     const endDate = new Date(sponsorship.endDate);
-    
+
     return endDate >= now;
   }
 
@@ -1213,7 +1215,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     // Set edit mode and track the donation being edited
     this.isDonationEditMode = true;
     this.editingDonationId = donation.id || null;
-    
+
     // Populate donation form with existing donation data
     this.donationForm.patchValue({
       amount: donation.amount,
@@ -1223,7 +1225,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       giftTypeId: donation.giftTypeId || (this.giftTypes && this.giftTypes.length > 0 ? this.giftTypes[0].id : ''),
       referenceNumber: donation.referenceNumber || ''
     });
-    
+
     this.isDonationFormVisible = true;
   }
 
@@ -1256,18 +1258,18 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       phone: [''],
       city: [''],
       country: [''],
-      
+
       // Donation Info
       hasDonations: [''],
       donationAmountFrom: [null],
       donationAmountTo: [null],
       donationDateFrom: [''],
       donationDateTo: [''],
-      
+
       // Sponsorship Info
       hasActiveSponsorships: [''],
       sponsorshipType: [''],
-      
+
       // Other Info
       registrationDateFrom: [''],
       registrationDateTo: [''],
@@ -1278,28 +1280,28 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   openAdvancedSearchModal(): void {
     this.isAdvancedSearchModalVisible = true;
   }
-  
+
   closeAdvancedSearchModal(shouldClearFilters: boolean = false): void {
     this.isAdvancedSearchModalVisible = false;
-    
+
     // If we're canceling and shouldClearFilters is true, clear the filters
     if (shouldClearFilters) {
       this.clearAdvancedSearch();
     }
   }
-  
+
   resetAdvancedSearch(): void {
     this.advancedSearchForm.reset();
   }
-  
+
   applyAdvancedSearch(): void {
     if (this.advancedSearchForm.invalid) {
       return;
     }
-    
+
     this.isAdvancedSearching = true;
     const searchRequest = this.convertFormDataToSearchRequest(this.advancedSearchForm.value);
-    
+
     this.donorService.advancedSearchDonors(searchRequest).subscribe({
       next: (donors) => {
         if (donors.length === 0) {
@@ -1308,7 +1310,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         } else {
           this.showMessage(`Found ${donors.length} donors matching your criteria`, 'success');
         }
-        
+
         this.donors = donors;
         this.filteredDonors = donors;
         this.isAdvancedSearching = false;
@@ -1322,16 +1324,16 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       }
     });
   }
-  
+
   // Helper method to show messages to the user
   private showMessage(message: string, type: 'success' | 'error' | 'info' | 'warning'): void {
     console.log(`[${type.toUpperCase()}] ${message}`);
   }
-  
-  
+
+
   convertFormDataToSearchRequest(formData: DonorAdvancedSearchFormData): DonorAdvancedSearchRequest {
     const request: DonorAdvancedSearchRequest = {};
-    
+
     // Personal Info
     if (formData.firstName) request.firstName = formData.firstName;
     if (formData.lastName) request.lastName = formData.lastName;
@@ -1339,7 +1341,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     if (formData.phone) request.phone = formData.phone;
     if (formData.city) request.city = formData.city;
     if (formData.country) request.country = formData.country;
-    
+
     // Donation Info
     if (formData.hasDonations === 'true') request.hasDonations = true;
     if (formData.hasDonations === 'false') request.hasDonations = false;
@@ -1347,29 +1349,29 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     if (formData.donationAmountTo) request.donationAmountTo = +formData.donationAmountTo;
     if (formData.donationDateFrom) request.donationDateFrom = formData.donationDateFrom;
     if (formData.donationDateTo) request.donationDateTo = formData.donationDateTo;
-    
+
     // Sponsorship Info
     if (formData.hasActiveSponsorships === 'true') request.hasActiveSponsorships = true;
     if (formData.hasActiveSponsorships === 'false') request.hasActiveSponsorships = false;
     if (formData.sponsorshipType) request.sponsorshipType = formData.sponsorshipType;
-    
+
     // Other Info
     if (formData.registrationDateFrom) request.registrationDateFrom = formData.registrationDateFrom;
     if (formData.registrationDateTo) request.registrationDateTo = formData.registrationDateTo;
     if (formData.donorId) request.donorId = formData.donorId;
-    
+
     return request;
   }
-  
+
   // This duplicate method has been merged with the main filterDonors method above
-  
+
   // Method to clear advanced search and reset to original donor list
   clearAdvancedSearch(): void {
     this.isAdvancedSearchApplied = false;
     this.loadDonors();
     this.resetAdvancedSearch();
   }
-  
+
   // Method to toggle advanced search modal visibility
   toggleAdvancedSearchModal(): void {
     if (this.isAdvancedSearchModalVisible) {
@@ -1378,14 +1380,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.openAdvancedSearchModal();
     }
   }
-  
+
   // Method to handle search input changes
   onSearchInputChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.searchTerm = input.value;
     this.filterDonors(input.value);
   }
-  
+
   // Email functionality methods
   toggleEmailForm(): void {
     this.showEmailForm = !this.showEmailForm;
@@ -1394,7 +1396,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.resetEmailForm();
     }
   }
-  
+
   resetEmailForm(): void {
     this.emailForm.reset({
       startDate: new Date(new Date().getFullYear(), 0, 1),
@@ -1403,38 +1405,38 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.emailError = null;
     this.emailSuccess = false;
   }
-  
+
   async sendDonationSummaryEmail(): Promise<void> {
     if (!this.selectedDonorDetail || !this.emailForm.valid) {
       this.emailError = 'Please select a donor and provide valid date range';
       return;
     }
-    
+
     this.isEmailLoading = true;
     this.emailError = null;
     this.emailSuccess = false;
-    
+
     try {
       const startDate = this.emailForm.value.startDate;
       const endDate = this.emailForm.value.endDate;
-      
+
       // Format dates as ISO strings for API calls (YYYY-MM-DD)
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
-      
+
       // Get donations for the selected period
       const donations = await this.emailService.getDonationsByDateRange(
         this.selectedDonorDetail.id,
         startDateStr,
         endDateStr
       ).toPromise();
-      
+
       if (!donations || donations.length === 0) {
         this.emailError = 'No donations found for the selected period';
         this.isEmailLoading = false;
         return;
       }
-      
+
       // Generate PDF
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
@@ -1442,10 +1444,10 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         startDate,
         endDate
       );
-      
+
       // Convert blob to file
       const pdfFile = new File([pdfBlob], 'donation_summary.pdf', { type: 'application/pdf' });
-      
+
       // Send email
       await this.emailService.sendDonationSummaryEmail(
         this.selectedDonorDetail.id,
@@ -1453,11 +1455,11 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         endDateStr,
         pdfFile
       ).toPromise();
-      
+
       this.emailSuccess = true;
       this.showMessage(`Donation summary email sent successfully to ${this.selectedDonorDetail.email}`, 'success');
       this.toggleEmailForm();
-      
+
     } catch (error: any) {
       console.error('Error sending donation summary email:', error);
       this.emailError = error.error || 'Failed to send donation summary email';
@@ -1471,25 +1473,25 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.emailError = 'Please select a donor';
       return;
     }
-    
+
     this.isYearlyEmailLoading = true;
     this.emailError = null;
     this.emailSuccess = false;
-    
+
     try {
       // Use selected year instead of current year
       const selectedYear = this.selectedYear;
-      
+
       // Create dates for PDF generation (keeping the Date objects for PDF generation)
       const startDate = new Date(selectedYear, 0, 1); // January 1st
       const endDate = new Date(selectedYear, 11, 31); // December 31st
-      
+
       // Get donations for the selected year
       const donations = await this.emailService.getDonationsByYear(
         this.selectedDonorDetail.id,
         selectedYear
       ).toPromise();
-      
+
       if (!donations || donations.length === 0) {
         this.emailError = `No donations found for ${selectedYear}`;
         this.isYearlyEmailLoading = false;
@@ -1498,14 +1500,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         this.showMessage(`No donations found for year ${selectedYear}. Please select a different year.`, 'warning');
         return;
       }
-      
+
       // Reset no donations flag if we have donations
       this.noDonationsFound = false;
       this.noDonationsMessage = '';
-      
+
       // Calculate total donation amount for the year
       const totalAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
-      
+
       // Generate PDF
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
@@ -1513,14 +1515,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         startDate,
         endDate
       );
-      
+
       // Convert blob to file
       const pdfFile = new File([pdfBlob], `yearly_donation_report_${selectedYear}.pdf`, { type: 'application/pdf' });
-      
+
       // Format dates as ISO strings for API calls (YYYY-MM-DD)
       const startDateStr = `${selectedYear}-01-01`; // January 1st
       const endDateStr = `${selectedYear}-12-31`; // December 31st
-      
+
       // Send email
       await this.emailService.sendDonationSummaryEmail(
         this.selectedDonorDetail.id,
@@ -1528,10 +1530,10 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         endDateStr,
         pdfFile
       ).toPromise();
-      
+
       this.emailSuccess = true;
       this.showMessage(`Yearly donation report for ${selectedYear} sent successfully to ${this.selectedDonorDetail.email}. Total donations: ${this.formatAmount(totalAmount)}`, 'success');
-      
+
     } catch (error: any) {
       console.error('Error sending yearly donation report:', error);
       this.emailError = error.error || 'Failed to send yearly donation report';
@@ -1545,31 +1547,31 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.emailError = 'Please select a donor';
       return;
     }
-    
+
     this.isMonthlyEmailLoading = true;
     this.emailError = null;
     this.emailSuccess = false;
-    
+
     // Reset alert state at the beginning
     this.noDonationsFound = false;
     this.noDonationsMessage = '';
-    
+
     try {
       // Use selected year and month instead of current date
       const selectedYear = this.selectedYear;
       const selectedMonth = this.selectedMonth;
-      
+
       // Create dates for PDF generation (keeping the Date objects for PDF generation)
       const startDate = new Date(selectedYear, selectedMonth, 1); // First day of selected month
       const endDate = new Date(selectedYear, selectedMonth + 1, 0); // Last day of selected month
-      
+
       // Get donations for the selected month and year
       const donations = await this.emailService.getDonationsByMonth(
         this.selectedDonorDetail.id,
         selectedYear,
         selectedMonth
       ).toPromise();
-      
+
       if (!donations || donations.length === 0) {
         const monthName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         console.log(`No donations found for month: ${monthName}, setting alert...`);
@@ -1577,23 +1579,23 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         this.isMonthlyEmailLoading = false;
         this.noDonationsFound = true;
         this.noDonationsMessage = `No donations found for ${monthName}. Please select a different month or year.`;
-        
+
         // Force UI update with setTimeout
         setTimeout(() => {
           console.log('Alert state in send method:', this.noDonationsFound, this.noDonationsMessage);
         }, 0);
-        
+
         this.showMessage(`No donations found for ${monthName}. Please select a different month or year.`, 'warning');
         return;
       }
-      
+
       // Reset no donations flag if we have donations
       this.noDonationsFound = false;
       this.noDonationsMessage = '';
-      
+
       // Calculate total donation amount for the month
       const totalAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
-      
+
       // Generate PDF
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
@@ -1601,17 +1603,17 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         startDate,
         endDate
       );
-      
+
       const monthName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).replace(' ', '_');
       // Convert blob to file
       const pdfFile = new File([pdfBlob], `monthly_donation_report_${monthName}.pdf`, { type: 'application/pdf' });
-      
+
       // Format dates as ISO strings for API calls (YYYY-MM-DD)
       const monthStr = (selectedMonth + 1).toString().padStart(2, '0');
       const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
       const startDateStr = `${selectedYear}-${monthStr}-01`; // First day of month
       const endDateStr = `${selectedYear}-${monthStr}-${lastDay}`; // Last day of month
-      
+
       // Send email
       await this.emailService.sendDonationSummaryEmail(
         this.selectedDonorDetail.id,
@@ -1619,11 +1621,11 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         endDateStr,
         pdfFile
       ).toPromise();
-      
+
       this.emailSuccess = true;
       const monthDisplayName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       this.showMessage(`Monthly donation report for ${monthDisplayName} sent successfully to ${this.selectedDonorDetail.email}. Total donations: ${this.formatAmount(totalAmount)}`, 'success');
-      
+
     } catch (error: any) {
       console.error('Error sending monthly donation report:', error);
       this.emailError = error.error || 'Failed to send monthly donation report';
@@ -1637,24 +1639,24 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.emailError = 'Please select a donor';
       return;
     }
-    
+
     this.isYearlyEmailLoading = true;
     this.emailError = null;
-    
+
     try {
       // Use selected year instead of current year
       const selectedYear = this.selectedYear;
-      
+
       // Create dates for PDF generation (keeping the Date objects for PDF generation)
       const startDate = new Date(selectedYear, 0, 1); // January 1st
       const endDate = new Date(selectedYear, 11, 31); // December 31st
-      
+
       // Get donations for the selected year
       const donations = await this.emailService.getDonationsByYear(
         this.selectedDonorDetail.id,
         selectedYear
       ).toPromise();
-      
+
       if (!donations || donations.length === 0) {
         this.emailError = `No donations found for ${selectedYear}`;
         this.noDonationsFound = true;
@@ -1662,14 +1664,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         this.showMessage(`No donations found for year ${selectedYear}. Please select a different year.`, 'warning');
         return;
       }
-      
+
       // Reset no donations flag if we have donations
       this.noDonationsFound = false;
       this.noDonationsMessage = '';
-      
+
       // Calculate total donation amount for the year
       const totalAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
-      
+
       // Generate PDF
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
@@ -1677,14 +1679,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         startDate,
         endDate
       );
-      
+
       // Open PDF in new window
       const pdfUrl = URL.createObjectURL(pdfBlob);
       window.open(pdfUrl, '_blank');
-      
+
       // Show success message with total amount
       this.showMessage(`Yearly donation report for ${selectedYear} previewed. Total donations: ${this.formatAmount(totalAmount)}`, 'info');
-      
+
     } catch (error: any) {
       console.error('Error previewing yearly donation report:', error);
       this.emailError = error.error || 'Failed to generate yearly donation report preview';
@@ -1698,53 +1700,53 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.emailError = 'Please select a donor';
       return;
     }
-    
+
     this.isMonthlyEmailLoading = true;
     this.emailError = null;
-    
+
     // Reset alert state at the beginning
     this.noDonationsFound = false;
     this.noDonationsMessage = '';
-    
+
     try {
       // Use selected year and month instead of current date
       const selectedYear = this.selectedYear;
       const selectedMonth = this.selectedMonth;
-      
+
       // Create dates for PDF generation (keeping the Date objects for PDF generation)
       const startDate = new Date(selectedYear, selectedMonth, 1); // First day of selected month
       const endDate = new Date(selectedYear, selectedMonth + 1, 0); // Last day of selected month
-      
+
       // Get donations for the selected month and year
       const donations = await this.emailService.getDonationsByMonth(
         this.selectedDonorDetail.id,
         selectedYear,
         selectedMonth
       ).toPromise();
-      
+
       if (!donations || donations.length === 0) {
         const monthName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         console.log(`No donations found for month: ${monthName}, setting alert...`);
         this.emailError = `No donations found for ${monthName}`;
         this.noDonationsFound = true;
         this.noDonationsMessage = `No donations found for ${monthName}. Please select a different month or year.`;
-        
+
         // Force UI update with setTimeout
         setTimeout(() => {
           console.log('Alert state:', this.noDonationsFound, this.noDonationsMessage);
         }, 0);
-        
+
         this.showMessage(`No donations found for ${monthName}. Please select a different month or year.`, 'warning');
         return;
       }
-      
+
       // Reset no donations flag if we have donations
       this.noDonationsFound = false;
       this.noDonationsMessage = '';
-      
+
       // Calculate total donation amount for the month
       const totalAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
-      
+
       // Generate PDF
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
@@ -1752,16 +1754,16 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         startDate,
         endDate
       );
-      
+
       // Open PDF in new window
       const pdfUrl = URL.createObjectURL(pdfBlob);
       window.open(pdfUrl, '_blank');
-      
+
       // Show success message with total amount
       const monthName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       this.showMessage(`Monthly donation report for ${monthName} previewed. Total donations: ${this.formatAmount(totalAmount)}`, 'info');
       setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
-      
+
     } catch (error: any) {
       console.error('Error previewing monthly donation report:', error);
       this.emailError = error.error || 'Failed to generate monthly donation report preview';
@@ -1769,33 +1771,33 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       this.isMonthlyEmailLoading = false;
     }
   }
-  
+
   async previewDonationSummary(): Promise<void> {
     if (!this.selectedDonorDetail || !this.emailForm.valid) {
       this.emailError = 'Please select a donor and provide valid date range';
       return;
     }
-    
+
     try {
       const startDate = this.emailForm.value.startDate;
       const endDate = this.emailForm.value.endDate;
-      
+
       // Format dates as ISO strings for API calls (YYYY-MM-DD)
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
-      
+
       // Get donations for the selected period
       const donations = await this.emailService.getDonationsByDateRange(
         this.selectedDonorDetail.id,
         startDateStr,
         endDateStr
       ).toPromise();
-      
+
       if (!donations || donations.length === 0) {
         this.emailError = 'No donations found for the selected period';
         return;
       }
-      
+
       // Generate and download PDF for preview
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
@@ -1803,7 +1805,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         startDate,
         endDate
       );
-      
+
       // Open PDF in new browser tab for preview
       const url = window.URL.createObjectURL(pdfBlob);
       const newWindow = window.open(url, '_blank');
@@ -1818,7 +1820,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
       }, 1000);
-      
+
     } catch (error: any) {
       console.error('Error generating donation summary preview:', error);
       this.emailError = 'Failed to generate donation summary preview';
@@ -1829,18 +1831,18 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   initializeDateRanges(): void {
     const now = new Date();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-    
+
     this.customStartDate = sixMonthsAgo.toISOString().split('T')[0];
     this.customEndDate = now.toISOString().split('T')[0];
   }
 
 
-  
+
   // Missing method implementations
   initializeForms(): void {
     // Forms are already initialized in constructor
   }
-  
+
   initializeAvailableYears(): void {
     const currentYear = new Date().getFullYear();
     this.availableYears = [];
@@ -1864,10 +1866,10 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   updateHistoryData(): void {
     if (!this.selectedDonor) return;
-    
+
     // Clear existing history data
     this.historyData = [];
-    
+
     // Load donation and gift history based on selected period
     this.loadDonationHistory();
     this.loadGiftHistory();
@@ -1875,7 +1877,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   loadDonationHistory(): void {
     if (!this.selectedDonor?.id) return;
-    
+
     this.donationService.getDonationsByDonorId(this.selectedDonor.id).subscribe({
       next: (donations) => {
         this.addToHistoryData(donations, 'donation');
@@ -1890,7 +1892,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   loadGiftHistory(): void {
     if (!this.selectedDonor?.id) return;
-    
+
     this.giftService.getGiftsByDonor(this.selectedDonor.id).subscribe({
       next: (gifts) => {
         this.addToHistoryData(gifts, 'gift');
@@ -1913,26 +1915,26 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       fundType: item.giftTypeName || 'General',
       status: 'Completed'
     }));
-    
+
     // Add to history data array (avoid duplicates)
     const existingIds = this.historyData.map(h => `${h.type}-${h.id}`);
     const newItems = historyItems.filter(item => !existingIds.includes(`${item.type}-${item.id}`));
     this.historyData = [...this.historyData, ...newItems];
-    
+
     // Filter data
     this.filterHistoryData();
-    
+
     // Update insights based on real data
     this.updateDonationInsights();
   }
 
   filterHistoryData(): void {
     let filtered = [...this.historyData];
-    
+
     // Apply date range filter based on selected period
     const now = new Date();
     let startDate: Date;
-    
+
     switch (this.selectedPeriod) {
       case '6months':
         startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
@@ -1951,21 +1953,21 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       default:
         startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
     }
-    
+
     if (this.selectedPeriod !== 'custom') {
       filtered = filtered.filter(item => new Date(item.date) >= startDate);
     }
-    
+
     // Apply search filter
     if (this.historySearchTerm) {
       const searchTerm = this.historySearchTerm.toLowerCase();
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         item.description.toLowerCase().includes(searchTerm) ||
         item.fundType?.toLowerCase().includes(searchTerm) ||
         item.type.toLowerCase().includes(searchTerm)
       );
     }
-    
+
     this.filteredHistoryData = filtered;
     this.sortHistoryData();
   }
@@ -1973,7 +1975,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   sortHistoryData(): void {
     this.filteredHistoryData.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (this.historySortBy) {
         case 'date':
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -1985,7 +1987,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
           comparison = a.type.localeCompare(b.type);
           break;
       }
-      
+
       return this.sortOrder === 'asc' ? comparison : -comparison;
     });
   }
@@ -1998,7 +2000,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
   calculatePeriodStats(): void {
     const donations = this.filteredHistoryData.filter(item => item.type === 'donation');
     const gifts = this.filteredHistoryData.filter(item => item.type === 'gift');
-    
+
     this.periodStats = {
       totalDonations: donations.reduce((sum, item) => sum + item.amount, 0),
       totalGifts: gifts.reduce((sum, item) => sum + item.amount, 0),
@@ -2009,12 +2011,12 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   calculateAveragePerMonth(donations: HistoryItem[]): number {
     if (donations.length === 0) return 0;
-    
+
     const totalAmount = donations.reduce((sum, item) => sum + item.amount, 0);
-    const monthsInPeriod = this.selectedPeriod === '6months' ? 6 : 
-                          this.selectedPeriod === '1year' ? 12 : 
+    const monthsInPeriod = this.selectedPeriod === '6months' ? 6 :
+                          this.selectedPeriod === '1year' ? 12 :
                           this.getCustomPeriodMonths();
-    
+
     return totalAmount / monthsInPeriod;
   }
 
@@ -2035,7 +2037,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.donorBalance = 0;
     this.historyData = [];
     this.filteredHistoryData = [];
-    
+
     // Reset statistics to default values
     this.donorStatistics = {
       totalOrphansSponsored: 0,
@@ -2045,14 +2047,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       totalDonations: 0,
       totalGifts: 0
     };
-    
+
     this.periodStats = {
       totalDonations: 0,
       totalGifts: 0,
       highestDonation: 0,
       averagePerMonth: 0
     };
-    
+
     this.donationInsights = {
       frequency: 'N/A',
       topFund: 'N/A',
@@ -2063,15 +2065,15 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
   updateDonationInsights(): void {
     if (this.historyData.length === 0) return;
-    
+
     const donations = this.historyData.filter(item => item.type === 'donation');
     if (donations.length === 0) return;
-    
+
     // Calculate frequency based on donation intervals
     const sortedDonations = donations.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     let totalDaysBetween = 0;
     let intervals = 0;
-    
+
     for (let i = 1; i < sortedDonations.length; i++) {
       const prevDate = new Date(sortedDonations[i-1].date);
       const currDate = new Date(sortedDonations[i].date);
@@ -2079,7 +2081,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       totalDaysBetween += daysDiff;
       intervals++;
     }
-    
+
     if (intervals > 0) {
       const avgDaysBetween = totalDaysBetween / intervals;
       if (avgDaysBetween <= 35) {
@@ -2092,14 +2094,14 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         this.donationInsights.frequency = 'Annual';
       }
     }
-    
+
     // Find top fund type
     const fundTypeCounts: {[key: string]: number} = {};
     this.historyData.forEach(item => {
       const fundType = item.fundType || 'General';
       fundTypeCounts[fundType] = (fundTypeCounts[fundType] || 0) + 1;
     });
-    
+
     let topFund = 'General';
     let maxCount = 0;
     Object.entries(fundTypeCounts).forEach(([fund, count]) => {
@@ -2109,21 +2111,21 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       }
     });
     this.donationInsights.topFund = topFund;
-    
+
     // Calculate growth (simple year-over-year if we have enough data)
     const currentYear = new Date().getFullYear();
     const currentYearDonations = donations.filter(d => new Date(d.date).getFullYear() === currentYear);
     const lastYearDonations = donations.filter(d => new Date(d.date).getFullYear() === currentYear - 1);
-    
+
     if (lastYearDonations.length > 0 && currentYearDonations.length > 0) {
       const currentYearTotal = currentYearDonations.reduce((sum, d) => sum + d.amount, 0);
       const lastYearTotal = lastYearDonations.reduce((sum, d) => sum + d.amount, 0);
       this.donationInsights.growth = ((currentYearTotal - lastYearTotal) / lastYearTotal) * 100;
     }
-    
+
     // Calculate consistency score based on regularity
-    this.donationInsights.consistencyScore = Math.min(100, Math.max(0, 
-      (donations.length / Math.max(1, intervals)) * 50 + 
+    this.donationInsights.consistencyScore = Math.min(100, Math.max(0,
+      (donations.length / Math.max(1, intervals)) * 50 +
       (intervals > 0 ? Math.max(0, 50 - (totalDaysBetween / intervals - 30)) : 0)
     ));
   }
@@ -2133,4 +2135,24 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     return Math.max(...this.donorDonations.map(donation => donation.amount));
   }
 
+  getFormattedAmount(giftTypeId: number): string {
+    return this.formattedGiftTypeAmounts.get(giftTypeId) ?? '0.00';
+  }
+
+  private loadAmountPerDonor(donorId:number) {
+    this.giftTypeService.findByDonorId(donorId).subscribe({
+      next: (amounts) => {
+        console.log(amounts)
+        this.formattedGiftTypeAmounts = new Map(
+          amounts.map((amount) => [
+            amount.giftType.id,
+            this.formatAmount(amount.amount || 0)
+          ])
+        );
+      },
+      error: (error) => {
+        console.error('Error loading gift history:', error);
+      }
+    });
+  }
 }

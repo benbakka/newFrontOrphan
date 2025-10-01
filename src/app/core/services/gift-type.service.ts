@@ -6,6 +6,7 @@ import { GiftType, CreateGiftTypeRequest, GiftTypeBalance } from '../models/gift
 import { Donation } from '../models/donation.model';
 import { Gift } from '../models/gift.model';
 import { environment } from '../../../environments/environment';
+import {AmountPerDonor} from '../models/amountPerDonor.model';
 
 @Injectable({
   providedIn: 'root'
@@ -25,7 +26,11 @@ export class GiftTypeService {
     console.log('Making API call to:', `${this.apiUrl}/with-balances`);
     return this.http.get<GiftType[]>(`${this.apiUrl}/with-balances`);
   }
-
+  // Get all gift types with their balances
+  findByDonorId( donorId:number): Observable<AmountPerDonor[]> {
+    // console.log('Making API call to:', `${environment.apiUrl}/api/amount`);
+    return this.http.get<AmountPerDonor[]>(`${environment.apiUrl}/api/amount/donor/${donorId}`);
+  }
   // Simple fallback method
   getAllGiftTypesSimple(): Observable<GiftType[]> {
     console.log('Making simple API call to:', `${this.apiUrl}/simple`);
