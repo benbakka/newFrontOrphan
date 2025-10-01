@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Donor, DonorDetailDTO, DonorListDTO } from '../models/donor.model';
 import { OrphanListDTO } from '../models/orphan-list.dto';
 import { DonorAdvancedSearchRequest } from '../models/donor-advanced-search.model';
+import {AdvancedSearchRequest} from '../models/advanced-search.model';
 
 @Injectable({
   providedIn: 'root'
@@ -87,10 +88,8 @@ export class DonorService {
   // Temporary client-side implementation until backend is ready
   advancedSearchDonors(searchRequest: DonorAdvancedSearchRequest): Observable<Donor[]> {
     // Get all donors and filter them client-side
-    return this.getDonors().pipe(
-      map((donors: Donor[]) => this.filterDonorsBySearchCriteria(donors, searchRequest))
-    );
-  }
+      return this.http.post<Donor[]>(`${this.baseUrl}/advanced-search`, searchRequest);
+    }
 
   // Client-side filtering implementation
   private filterDonorsBySearchCriteria(donors: Donor[], criteria: DonorAdvancedSearchRequest): Donor[] {
@@ -118,19 +117,19 @@ export class DonorService {
       if (criteria.country && !donor.country?.toLowerCase().includes(criteria.country.toLowerCase())) {
         return false;
       }
-      
+
       // Donation Info filters - basic implementation
       // Note: These filters would normally be handled by the backend
       // This is a simplified version for client-side filtering
-      
+
       // Sponsorship Info filters - basic implementation
       // Note: These filters would normally be handled by the backend
-      
+
       // Other Info filters
       if (criteria.donorId && donor.id !== parseInt(criteria.donorId.toString(), 10)) {
         return false;
       }
-      
+
       return true;
     });
   }
