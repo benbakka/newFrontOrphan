@@ -1607,12 +1607,15 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
       const monthName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).replace(' ', '_');
       // Convert blob to file
       const pdfFile = new File([pdfBlob], `monthly_donation_report_${monthName}.pdf`, { type: 'application/pdf' });
-
+      console.log(selectedMonth)
       // Format dates as ISO strings for API calls (YYYY-MM-DD)
-      const monthStr = (selectedMonth + 1).toString().padStart(2, '0');
-      const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-      const startDateStr = `${selectedYear}-${monthStr}-01`; // First day of month
-      const endDateStr = `${selectedYear}-${monthStr}-${lastDay}`; // Last day of month
+      const selectedMonthNum = selectedMonth ;
+
+      const monthStr = (Number(selectedMonth) + 1).toString().padStart(2, '0');
+      const lastDay = new Date(selectedYear, selectedMonthNum + 1, 0).getDate();
+
+      const startDateStr = `${selectedYear}-${monthStr}-01`;
+      const endDateStr = `${selectedYear}-${monthStr}-${lastDay}`;
 
       // Send email
       await this.emailService.sendDonationSummaryEmail(
@@ -1723,7 +1726,6 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
         selectedYear,
         selectedMonth
       ).toPromise();
-
       if (!donations || donations.length === 0) {
         const monthName = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         console.log(`No donations found for month: ${monthName}, setting alert...`);
