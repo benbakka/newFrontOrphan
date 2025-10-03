@@ -88,7 +88,7 @@ export class GiftsComponent implements OnInit {
     console.log('Starting to load gift types...');
     this.isLoading = true;
     this.error = '';
-    
+
     // Try the complex query first, fallback to simple if it fails
     this.giftTypeService.getAllGiftTypesWithBalances().subscribe({
       next: (giftTypes) => {
@@ -242,13 +242,13 @@ export class GiftsComponent implements OnInit {
     // Categorize gift types
     this.giftTypes.forEach(giftType => {
       let categorized = false;
-      
+
       for (const category of this.categories) {
         if (category.name === 'Other') continue;
-        
+
         const mapping = this.categoryMappings[category.name as keyof typeof this.categoryMappings];
         const giftTypeName = giftType.name.toLowerCase();
-        
+
         if (mapping.keywords.some(keyword => giftTypeName.includes(keyword.toLowerCase()))) {
           category.giftTypes.push(giftType);
           category.totalDonations += giftType.totalDonations || 0;
@@ -258,7 +258,7 @@ export class GiftsComponent implements OnInit {
           break;
         }
       }
-      
+
       // If not categorized, add to "Other"
       if (!categorized) {
         const otherCategory = this.categories.find(c => c.name === 'Other')!;
