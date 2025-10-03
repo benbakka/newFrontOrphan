@@ -67,7 +67,7 @@ export class EmailService {
     doc.setFont('helvetica', 'normal');
 
     // Add receipt date - right aligned
-    const reportDate = new Date().toLocaleDateString('en-US', { 
+    const reportDate = new Date().toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric'
@@ -78,12 +78,12 @@ export class EmailService {
     // Add donor information
     doc.text(`${donor.firstName} ${donor.lastName}`, margin, currentY);
     currentY += lineHeight;
-    
+
     if (donor.address) {
       doc.text(donor.address, margin, currentY);
       currentY += lineHeight;
     }
-    
+
     if (donor.city && donor.state && donor.zip) {
       doc.text(`${donor.city}, ${donor.state} ${donor.zip}`, margin, currentY);
       currentY += lineHeight * 2.8;
@@ -157,7 +157,7 @@ export class EmailService {
 
     // Add receipt date - right aligned
     const donationDate = donation.donationDate ? new Date(donation.donationDate) : new Date();
-    const formattedDate = donationDate.toLocaleDateString('en-US', { 
+    const formattedDate = donationDate.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric'
@@ -168,12 +168,12 @@ export class EmailService {
     // Add donor information
     doc.text(`${donor.firstName} ${donor.lastName}`, margin, currentY);
     currentY += lineHeight;
-    
+
     if (donor.address) {
       doc.text(donor.address, margin, currentY);
       currentY += lineHeight;
     }
-    
+
     if (donor.city && donor.state && donor.zip) {
       doc.text(`${donor.city}, ${donor.state} ${donor.zip}`, margin, currentY);
       currentY += lineHeight * 2.8;
@@ -266,7 +266,7 @@ export class EmailService {
     if (addCurrency) {
       result += result === 'one' ? ' dollar' : ' dollars';
     }
-    
+
     return result.charAt(0).toUpperCase() + result.slice(1);
   }
 
@@ -276,17 +276,17 @@ export class EmailService {
   formatAmountText(amount: number): string {
     const dollars = Math.floor(amount);
     const cents = Math.round((amount % 1) * 100);
-    
+
     // Format numeric part - show cents only if non-zero
     const numericPart = cents === 0 ? `$${dollars}` : `$${amount.toFixed(2)}`;
-    
+
     // Format text part
     let amountInWords = this.numberToWords(dollars, true);
     if (cents > 0) {
       amountInWords += ` and ${this.numberToWords(cents)} cents`;
     }
     // No 'zero cents' text for whole numbers
-    
+
     return `${numericPart} (${amountInWords})`;
   }
 
@@ -300,7 +300,7 @@ export class EmailService {
 
     // Check if it's a single day
     if (this.isSameDay(startDate, endDate)) {
-      const formattedDate = startDate.toLocaleDateString('en-US', { 
+      const formattedDate = startDate.toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
         year: 'numeric'
@@ -324,7 +324,7 @@ export class EmailService {
 
     // Check if it's a full month
     if (this.isFullMonth(startDate, endDate)) {
-      const monthYear = startDate.toLocaleDateString('en-US', { 
+      const monthYear = startDate.toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric'
       });
@@ -337,7 +337,7 @@ export class EmailService {
 
     // Check if it's a quarter
     if (this.isQuarter(startDate, endDate)) {
-      const monthYear = startDate.toLocaleDateString('en-US', { 
+      const monthYear = startDate.toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric'
       });
@@ -393,7 +393,7 @@ export class EmailService {
     const month = startDate.getMonth();
     const monthStart = new Date(year, month, 1);
     const monthEnd = new Date(year, month + 1, 0); // Last day of the month
-    
+
     return this.isSameDay(startDate, monthStart) && this.isSameDay(endDate, monthEnd);
   }
 
@@ -404,19 +404,19 @@ export class EmailService {
     // Check if start date is the first day of a quarter (Jan 1, Apr 1, Jul 1, Oct 1)
     const startMonth = startDate.getMonth();
     const isStartOfQuarter = startDate.getDate() === 1 && (startMonth === 0 || startMonth === 3 || startMonth === 6 || startMonth === 9);
-    
+
     // Check if end date is the last day of a quarter (Mar 31, Jun 30, Sep 30, Dec 31)
     const endMonth = endDate.getMonth();
-    const isEndOfQuarter = 
+    const isEndOfQuarter =
       (endMonth === 2 && endDate.getDate() === 31) || // March 31
       (endMonth === 5 && endDate.getDate() === 30) || // June 30
       (endMonth === 8 && endDate.getDate() === 30) || // September 30
       (endMonth === 11 && endDate.getDate() === 31);  // December 31
-    
+
     // Both conditions must be true and the dates must be in the same year
     return isStartOfQuarter && isEndOfQuarter && startDate.getFullYear() === endDate.getFullYear();
   }
-  
+
   /**
    * Checks if the date range represents a semester (6 months)
    */
@@ -424,13 +424,13 @@ export class EmailService {
     // Check if start date is the first day of a semester (Jan 1 or Jul 1)
     const startMonth = startDate.getMonth();
     const isStartOfSemester = startDate.getDate() === 1 && (startMonth === 0 || startMonth === 6);
-    
+
     // Check if end date is the last day of a semester (Jun 30 or Dec 31)
     const endMonth = endDate.getMonth();
-    const isEndOfSemester = 
+    const isEndOfSemester =
       (endMonth === 5 && endDate.getDate() === 30) || // June 30
       (endMonth === 11 && endDate.getDate() === 31);  // December 31
-    
+
     // Both conditions must be true and the dates must be in the same year
     return isStartOfSemester && isEndOfSemester && startDate.getFullYear() === endDate.getFullYear();
   }
@@ -452,7 +452,7 @@ export class EmailService {
       params: { startDate, endDate }
     });
   }
-  
+
   /**
    * Get donations for a specific year
    * @param donorId The donor ID
@@ -464,10 +464,10 @@ export class EmailService {
     // Use UTC date strings to avoid timezone issues
     const startDateStr = `${year}-01-01`; // January 1st
     const endDateStr = `${year}-12-31`; // December 31st
-    
+
     return this.getDonationsByDateRange(donorId, startDateStr, endDateStr);
   }
-  
+
   /**
    * Get donations for a specific month and year
    * @param donorId The donor ID
@@ -480,15 +480,15 @@ export class EmailService {
     // Ensure month is a number before adding 1 to avoid concatenation issues
     const monthNum = Number(month) + 1;
     const monthStr = monthNum.toString().padStart(2, '0');
-    
+
     // Calculate last day of month (accounting for different month lengths and leap years)
-    const lastDay = new Date(year, month + 1, 0).getDate();
+    const lastDay = new Date(year, Number(month) + 1, 0).getDate();
     const lastDayStr = lastDay.toString().padStart(2, '0');
-    
+
     // Create date strings directly in YYYY-MM-DD format to avoid timezone issues
     const startDateStr = `${year}-${monthStr}-01`; // First day of month
     const endDateStr = `${year}-${monthStr}-${lastDayStr}`; // Last day of month
-    
+
     console.log(`Monthly report date range: ${startDateStr} to ${endDateStr}`);
     return this.getDonationsByDateRange(donorId, startDateStr, endDateStr);
   }
@@ -498,7 +498,7 @@ export class EmailService {
       params: { startDate, endDate }
     });
   }
-  
+
   /**
    * Get total donation amount for a specific year
    * @param donorId The donor ID
@@ -508,14 +508,14 @@ export class EmailService {
   getDonationTotalByYear(donorId: number, year: number): Observable<number> {
     const startDate = new Date(year, 0, 1); // January 1st
     const endDate = new Date(year, 11, 31); // December 31st
-    
+
     // Format dates as ISO strings for API calls (YYYY-MM-DD)
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
-    
+
     return this.getDonationTotal(donorId, startDateStr, endDateStr);
   }
-  
+
   /**
    * Get total donation amount for a specific month and year
    * @param donorId The donor ID
@@ -526,11 +526,11 @@ export class EmailService {
   getDonationTotalByMonth(donorId: number, year: number, month: number): Observable<number> {
     const startDate = new Date(year, month, 1); // First day of month
     const endDate = new Date(year, month + 1, 0); // Last day of month
-    
+
     // Format dates as ISO strings for API calls (YYYY-MM-DD)
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
-    
+
     return this.getDonationTotal(donorId, startDateStr, endDateStr);
   }
 

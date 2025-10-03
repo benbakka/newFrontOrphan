@@ -1563,7 +1563,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
       // Create dates for PDF generation (keeping the Date objects for PDF generation)
       const startDate = new Date(selectedYear, selectedMonth, 1); // First day of selected month
-      const endDate = new Date(selectedYear, selectedMonth + 1, 0); // Last day of selected month
+      const endDate = new Date(selectedYear, Number(selectedMonth) + 1, 0); // Last day of selected month
 
       // Get donations for the selected month and year
       const donations = await this.emailService.getDonationsByMonth(
@@ -1718,7 +1718,8 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
       // Create dates for PDF generation (keeping the Date objects for PDF generation)
       const startDate = new Date(selectedYear, selectedMonth, 1); // First day of selected month
-      const endDate = new Date(selectedYear, selectedMonth + 1, 0); // Last day of selected month
+      const endDate = new Date(selectedYear, Number(selectedMonth) + 1, 0); // Last day of selected month
+      console.log('endDate2',endDate)
 
       // Get donations for the selected month and year
       const donations = await this.emailService.getDonationsByMonth(
@@ -1748,7 +1749,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
       // Calculate total donation amount for the month
       const totalAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
-
+      console.log('endDate',endDate)
       // Generate PDF
       const pdfBlob = await this.emailService.generateDonationSummaryPDF(
         this.selectedDonorDetail,
