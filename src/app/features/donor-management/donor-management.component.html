@@ -484,7 +484,7 @@
                             </div>
                             <div class="stat-value fw-bold"
                                  [ngClass]="{'text-success': donorBalance > 0, 'text-warning': donorBalance === 0, 'text-danger': donorBalance < 0}">
-                              {{ formatCurrency(donorBalance) }}
+                              {{ formatCurrency(getAvailableBalance()) }}
                             </div>
                             <div class="stat-label small text-muted">Available Balance</div>
                           </div>

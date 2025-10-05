@@ -362,6 +362,7 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
 
         // Load donor statistics if available
         if (donorDetail.statistics) {
+          console.log(donorDetail.statistics)
           this.donorStatistics = donorDetail.statistics;
         }
 
@@ -457,7 +458,9 @@ export class DonorManagementComponent implements OnInit, AfterViewInit, OnDestro
     this.donorStatistics.totalDonations = totalDonations;
     this.donorStatistics.totalGifts = totalGifts;
   }
-
+  getAvailableBalance(): number{
+    return this.donorDonations.reduce((sum, donation) => sum + donation.amount, 0) - this.donorGifts.reduce((sum, gift) => sum + gift.amount, 0);
+  }
   loadDonors(): void {
     this.isLoading = true;
     this.donorService.getDonors().subscribe({
