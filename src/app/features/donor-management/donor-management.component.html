@@ -654,7 +654,7 @@
                         <select class="form-select" formControlName="giftTypeId" (change)="onGiftTypeChange()" [class.is-invalid]="giftForm.get('giftTypeId')?.invalid && giftForm.get('giftTypeId')?.touched">
                           <option [ngValue]="null">Select Gift Type</option>
                           <option *ngFor="let type of giftTypes" [ngValue]="type.id">
-                            {{ type.name }} (Balance: getFormattedAmount(type.id) )
+                            {{ type.name }} (Balance: {{ getFormattedAmount(type.id) }} )
                           </option>
                           <option value="custom">Create Custom Type</option>
                         </select>

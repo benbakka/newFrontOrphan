@@ -20,35 +20,35 @@ export class CharityProjectsComponent implements OnInit {
   filteredProjects: CharityProject[] = [];
   projectTypes: string[] = [];
   selectedProject: CharityProject | null = null;
-  
+
   // Pagination
   currentPage = 0;
   pageSize = 10;
   totalElements = 0;
   totalPages = 0;
-  
+
   // Filters and search
   searchTerm = '';
   selectedType = '';
   selectedStatus: ProjectStatus | '' = '';
   sortBy = 'createdDate';
   sortDir = 'desc';
-  
+
   // Form and modal states
   projectForm: FormGroup;
   showForm = false;
   isEditing = false;
   isEditingInline = false;
   editingProjectId: number | null = null;
-  
+
   // Detail tabs
   activeDetailTab = 'info';
-  
+
   // Loading states
   isLoading = false;
   isSubmitting = false;
   isLoadingGifts = false;
-  
+
   // Gift related properties
   projectGifts: Gift[] = [];
   giftForm: FormGroup;
@@ -57,7 +57,7 @@ export class CharityProjectsComponent implements OnInit {
   giftSuccess = false;
   isSubmittingGift = false;
   beneficiaryType: 'project' = 'project';
-  
+
   // Enums for template
   ProjectStatus = ProjectStatus;
   projectStatuses = Object.values(ProjectStatus);
@@ -91,7 +91,7 @@ export class CharityProjectsComponent implements OnInit {
       this.loadProjectGifts(project.id);
     }
   }
-  
+
   loadProjectGifts(projectId: number): void {
     this.isLoadingGifts = true;
     // Try to get all gifts and filter by project ID as fallback
@@ -113,7 +113,7 @@ export class CharityProjectsComponent implements OnInit {
       }
     });
   }
-  
+
   loadGiftTypes(): void {
     this.giftTypeService.getAllGiftTypesWithBalances().subscribe({
       next: (types) => {
@@ -140,9 +140,9 @@ export class CharityProjectsComponent implements OnInit {
 
   loadProjects(): void {
     this.isLoading = true;
-    
+
     const statusFilter = this.selectedStatus === '' ? undefined : this.selectedStatus;
-    
+
     this.charityProjectService.getCharityProjects(
       this.currentPage,
       this.pageSize,
@@ -217,7 +217,7 @@ export class CharityProjectsComponent implements OnInit {
       this.showForm = true;
     }
   }
-  
+
   createNewProject(): void {
     // Create an empty project template
     const emptyProject: CharityProject = {
@@ -230,14 +230,14 @@ export class CharityProjectsComponent implements OnInit {
       startDate: new Date().toISOString().split('T')[0],
       progressPercentage: 0
     };
-    
+
     // Set as selected project
     this.selectedProject = emptyProject;
-    
+
     // Switch to info tab and start editing
     this.activeDetailTab = 'info';
     this.isEditingInline = true;
-    
+
     // Reset form with default values
     this.projectForm.reset({
       name: 'New Project',
@@ -249,7 +249,7 @@ export class CharityProjectsComponent implements OnInit {
       startDate: new Date().toISOString().split('T')[0]
     });
   }
-  
+
   showAddForm(): void {
     this.isEditing = false;
     this.editingProjectId = null;
@@ -280,7 +280,7 @@ export class CharityProjectsComponent implements OnInit {
     if (this.projectForm.valid) {
       this.isSubmitting = true;
       const formValue = this.projectForm.value;
-      
+
       const request: CreateCharityProjectRequest = {
         name: formValue.name,
         type: formValue.type,
@@ -330,7 +330,7 @@ export class CharityProjectsComponent implements OnInit {
     this.editingProjectId = null;
     this.projectForm.reset();
   }
-  
+
   startInlineEdit(): void {
     this.isEditingInline = true;
     this.editingProjectId = this.selectedProject?.id || null;
@@ -345,18 +345,18 @@ export class CharityProjectsComponent implements OnInit {
       endDate: this.selectedProject?.endDate
     });
   }
-  
+
   cancelInlineEdit(): void {
     this.isEditingInline = false;
     this.editingProjectId = null;
     this.projectForm.reset();
   }
-  
+
   saveInlineEdit(): void {
     if (this.projectForm.valid && this.selectedProject) {
       this.isSubmitting = true;
       const formValue = this.projectForm.value;
-      
+
       const request: CreateCharityProjectRequest = {
         name: formValue.name,
         type: formValue.type,
@@ -370,7 +370,7 @@ export class CharityProjectsComponent implements OnInit {
 
       // Check if this is a new project or an existing one
       const isNewProject = !this.selectedProject.id;
-      
+
       const operation = isNewProject
         ? this.charityProjectService.createCharityProject(request)
         : this.charityProjectService.updateCharityProject(this.selectedProject.id!, request);
@@ -424,13 +424,13 @@ export class CharityProjectsComponent implements OnInit {
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString();
   }
-  
-  
+
+
   onGiftTypeChange(): void {
     // Update form validators based on gift type selection
     const giftTypeId = this.giftForm.get('giftTypeId')?.value;
     const customNameControl = this.giftForm.get('customGiftTypeName');
-    
+
     if (giftTypeId === 'custom') {
       customNameControl?.setValidators([Validators.required]);
     } else {
@@ -444,12 +444,12 @@ export class CharityProjectsComponent implements OnInit {
       this.giftForm.markAllAsTouched();
       return;
     }
-    
+
     this.giftError = null;
     this.giftSuccess = false;
 
     const formValues = this.giftForm.value;
-    
+
     // Handle custom gift type if selected
     let giftTypeId = formValues.giftTypeId;
     if (giftTypeId === 'custom' && formValues.customGiftTypeName) {
@@ -476,7 +476,7 @@ export class CharityProjectsComponent implements OnInit {
 
   processGiftSubmission(giftTypeId: number): void {
     const formValues = this.giftForm.value;
-    
+
     // Check balance before creating gift
     this.giftService.checkGiftTypeBalance(giftTypeId, +formValues.amount).subscribe({
       next: (hasSufficientBalance) => {
@@ -484,9 +484,9 @@ export class CharityProjectsComponent implements OnInit {
           this.giftError = 'There is not enough balance for this type of gift';
           return;
         }
-        
+
         const giftRequest: CreateGiftRequestV2 = {
-          donorId: 1, // Default donor ID since not shown in form
+          // donorId: 1, // Default donor ID since not shown in form
           giftTypeId: giftTypeId,
           amount: +formValues.amount,
           giftName: formValues.description || 'Gift', // Use description as gift name or default to 'Gift'
@@ -495,7 +495,7 @@ export class CharityProjectsComponent implements OnInit {
           beneficiaryType: this.beneficiaryType,
           projectId: this.selectedProject?.id
         };
-        
+
         this.isSubmittingGift = true;
         this.giftService.createGiftV2(giftRequest).subscribe({
           next: (response) => {
@@ -504,7 +504,7 @@ export class CharityProjectsComponent implements OnInit {
             this.resetGiftForm();
             this.loadProjectGifts(this.selectedProject?.id!);
             this.loadGiftTypes(); // Reload gift types to update balances
-            
+
             // Update project progress with new gift amount
             if (this.selectedProject) {
               const updatedAmount = this.selectedProject.collectedAmount + +formValues.amount;
